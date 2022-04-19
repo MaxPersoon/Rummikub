@@ -41,13 +41,14 @@ public class Main extends Application {
         final double[] POOL_START = {920, 20};
         final double POOL_WIDTH = 90;
         final double POOL_HEIGHT = 70;
-        final Image BLACK_1 = new Image(new FileInputStream("resources/tiles/black-1.png"));
+        final Image DEFAULT = new Image(new FileInputStream("resources/tiles/default.png"));
+        final boolean SHOW_TILE_LOCATIONS = true;
 
         // Pool
         Rectangle pool = new Rectangle(POOL_START[0], POOL_START[1], POOL_WIDTH, POOL_HEIGHT);
         pool.setFill(Color.DARKBLUE);
         nodes.add(pool);
-        ImageView tile = new ImageView(BLACK_1);
+        ImageView tile = new ImageView(DEFAULT);
         tile.setX(POOL_START[0] + TILE_OFFSET);
         tile.setY(POOL_START[1] + TILE_OFFSET);
         tile.setFitWidth(TILE_WIDTH);
@@ -68,9 +69,10 @@ public class Main extends Application {
         nodes.add(rack2);
         for (int rowIndex = 0; rowIndex < 2; rowIndex++) {
             for (int columnIndex = 0; columnIndex < 12; columnIndex++) {
+                // Tile in rack 1
                 double startX = RACK1_START[0] + TILE_OFFSET + columnIndex * (TILE_OFFSET + TILE_WIDTH);
                 double startY = RACK1_START[1] + TILE_OFFSET + rowIndex * (TILE_OFFSET + TILE_HEIGHT);
-                tile = new ImageView(BLACK_1);
+                tile = new ImageView(DEFAULT);
                 tile.setX(startX);
                 tile.setY(startY);
                 tile.setFitWidth(TILE_WIDTH);
@@ -78,9 +80,10 @@ public class Main extends Application {
                 tile.setPreserveRatio(true);
                 nodes.add(tile);
 
+                // Tile in rack 2
                 startX = RACK2_START[0] + TILE_OFFSET + columnIndex * (TILE_OFFSET + TILE_WIDTH);
                 startY = RACK2_START[1] + TILE_OFFSET + rowIndex * (TILE_OFFSET + TILE_HEIGHT);
-                tile = new ImageView(BLACK_1);
+                tile = new ImageView(DEFAULT);
                 tile.setX(startX);
                 tile.setY(startY);
                 tile.setFitWidth(TILE_WIDTH);
@@ -101,7 +104,7 @@ public class Main extends Application {
                 if (!(rowIndex == 11 && columnIndex >= 26)) {
                     double startX = TABLE_START[0] + TILE_OFFSET + columnIndex * (TILE_OFFSET + TILE_WIDTH) + Math.floor(columnIndex / 13d) * 20;
                     double startY = TABLE_START[1] + TILE_OFFSET + rowIndex * (TILE_OFFSET + TILE_HEIGHT);
-                    tile = new ImageView(BLACK_1);
+                    tile = new ImageView(DEFAULT);
                     tile.setX(startX);
                     tile.setY(startY);
                     tile.setFitWidth(TILE_WIDTH);
