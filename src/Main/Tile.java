@@ -1,6 +1,9 @@
 package Main;
 
+import Players.Player;
+
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public class Tile {
@@ -8,18 +11,21 @@ public class Tile {
     private final int ID;
     private final int NUMBER;
     private final String COLOUR;
-    private final List<Integer> SETS; // IDs of sets in which this tile occurs
+    private final List<Set> SETS;
 
-    private int tableCounter;
-    private int[] rackCounters;
+    private boolean onTable;
+    private final HashMap<Player, Integer> RACK_COUNTERS;
 
-    public Tile(int id, int number, String colour, int playerCount) {
+    public Tile(int id, int number, String colour, List<Player> players) {
         this.ID = id;
         this.NUMBER = number;
         this.COLOUR = colour;
         this.SETS = new ArrayList<>();
-        this.tableCounter = 0;
-        this.rackCounters = new int[playerCount];
+        this.onTable = false;
+        this.RACK_COUNTERS = new HashMap<>();
+        for (Player player : players) {
+            RACK_COUNTERS.put(player, 0);
+        }
     }
 
     public int getID() {
@@ -34,28 +40,46 @@ public class Tile {
         return COLOUR;
     }
 
-    public List<Integer> getSETS() {
+    public List<Set> getSETS() {
         return SETS;
     }
 
-    public int getTableCounter() {
-        return tableCounter;
+    public boolean isOnTable() {
+        return onTable;
     }
 
-    public int[] getRackCounters() {
-        return rackCounters;
+    public Integer getRackCounter(Player player) {
+        return RACK_COUNTERS.get(player);
     }
 
-    public void addSet(int setID) {
-        this.SETS.add(setID);
+    public void addSet(Set set) {
+        this.SETS.add(set);
     }
 
-    public void setTableCounter(int tableCounter) {
-        this.tableCounter = tableCounter;
+    public void setOnTable(boolean onTable) {
+        this.onTable = onTable;
     }
 
-    public void setRackCounter(int index, int rackCounter) {
-        this.rackCounters[index] = rackCounter;
+    public void increaseRackCounter(Player player, int increaseAmount) {
+        int newAmount = this.RACK_COUNTERS.get(player) + increaseAmount;
+        this.RACK_COUNTERS.replace(player, newAmount);
+    }
+
+    public void decreaseRackCounter(Player player, int decreaseAmount) {
+        int newAmount = this.RACK_COUNTERS.get(player) - decreaseAmount;
+        this.RACK_COUNTERS.replace(player, newAmount);
+    }
+
+    public void print() {
+        System.out.println("Tile #" + this.ID + ": " + this.NUMBER + ", " + this.COLOUR);
+    }
+
+    public Tile makeCopy(int id) {
+        return new Tile(id, this.NUMBER, this.COLOUR, Game.PLAYERS);
+    }
+
+    public boolean checkMatchingTile(Tile tileToCheck) {
+        return this.NUMBER == tileToCheck.NUMBER && this.COLOUR.equals(tileToCheck.COLOUR);
     }
 
 }

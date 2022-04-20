@@ -89,8 +89,6 @@ public class Main extends Application {
                 tile.setFitWidth(TILE_WIDTH);
                 tile.setFitHeight(TILE_HEIGHT);
                 tile.setPreserveRatio(true);
-//                tile = new Rectangle(startX, startY, TILE_WIDTH, TILE_HEIGHT);
-//                tile.setFill(Color.GOLD);
                 nodes.add(tile);
             }
         }
