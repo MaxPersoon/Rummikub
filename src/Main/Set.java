@@ -1,23 +1,27 @@
 package Main;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Set {
 
     private final int ID;
     private final String TYPE; // "group" or "run"
-    private final List<Tile> TILES;
-
-    private int tableCounter;
+    private final List<List<Tile>> TILES;
 
     public Set(int id, String type, List<Tile> tiles) {
         this.ID = id;
         this.TYPE = type;
-        this.TILES = tiles;
+        TILES = new ArrayList<>();
         for (Tile tile : tiles) {
-            tile.addSet(this);
+            List<Tile> copies = new ArrayList<>();
+            copies.add(tile);
+            copies.add(Game.TILES.get(tile.getID()));
+            TILES.add(copies);
+            for (Tile copy : copies) {
+                copy.addSet(this);
+            }
         }
-        this.tableCounter = 0;
     }
 
     public int getID() {
@@ -28,43 +32,118 @@ public class Set {
         return TYPE;
     }
 
-    public List<Tile> getTILES() {
+    public List<List<Tile>> getTILES() {
         return TILES;
     }
 
-    public int getTableCounter() {
-        return tableCounter;
+    public List<Tile> drawableFromRack(List<Tile> rack) {
+        // If drawable, returns all tiles which must be removed from the rack
+        // If not drawable, returns an empty list
+        List<Tile> tilesInSet = new ArrayList<>();
+
+        if (rack.size() >= TILES.size()) {
+            for (List<Tile> copies : TILES) {
+                boolean copyFound = false;
+
+                for (Tile copy : copies) {
+                    if (!copyFound) {
+                        for (Tile tileRack : rack) {
+                            if (copy == tileRack) {
+                                copyFound = true;
+                                tilesInSet.add(copy);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (!copyFound) {
+                    tilesInSet.clear();
+                    break;
+                }
+            }
+        }
+
+        return tilesInSet;
     }
 
-    public void setTableCounter(int tableCounter) {
-        this.tableCounter = tableCounter;
+    public boolean isExpandingTile(Tile expandingTile) {
+        boolean isExpandingTile = false;
+
+        if (TYPE.equals("group")) {
+            if (TILES.size() == 3) {
+                if (expandingTile.getNUMBER() == TILES.get(0).get(0).getNUMBER()) {
+                    isExpandingTile = true;
+                    for (List<Tile> copies : TILES) {
+                        if (expandingTile.getCOLOUR().equals(copies.get(0).getCOLOUR())) {
+                            isExpandingTile = false;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        else {
+            // run
+            if (TILES.size() < 13) {
+                if (expandingTile.getCOLOUR().equals(TILES.get(0).get(0).getCOLOUR())) {
+                    if (expandingTile.getNUMBER() == TILES.get(0).get(0).getNUMBER() - 1 || expandingTile.getNUMBER() == TILES.get(TILES.size() - 1).get(0).getNUMBER() + 1) {
+                        isExpandingTile = true;
+                    }
+                }
+            }
+        }
+
+        return isExpandingTile;
     }
 
     public void print() {
         StringBuilder text = new StringBuilder();
-        for (Tile tile : TILES) {
+        for (List<Tile> allCopies : TILES) {
+            Tile copy1 = allCopies.get(0);
             if (!text.isEmpty()) {
                 text.append(" | ");
             }
-            text.append(tile.getNUMBER() + ", " + tile.getCOLOUR());
+            text.append(copy1.getNUMBER() + ", " + copy1.getCOLOUR());
         }
         System.out.println("Set #" + this.ID + ": " + text);
     }
 
-    public boolean checkMatchingTiles(List<Tile> tilesToCheck) {
-        for (Tile tileToCheck : tilesToCheck) {
-            boolean match = false;
-            for (Tile tile : TILES) {
-                if (tileToCheck.checkMatchingTile(tile)) {
-                    match = true;
-                    break;
+    public void printAllCopies() {
+        StringBuilder text = new StringBuilder();
+        for (List<Tile> allCopies : TILES) {
+            StringBuilder subtext = new StringBuilder();
+            for (Tile copy : allCopies) {
+                if (subtext.isEmpty()) {
+                    subtext.append("(1st) ");
                 }
+                else {
+                    subtext.append(" (2nd) ");
+                }
+                subtext.append(copy.getNUMBER() + ", " + copy.getCOLOUR());
             }
-            if (!match) {
-                return false;
+            if (!text.isEmpty()) {
+                text.append(" | ");
             }
+            text.append(subtext);
         }
-        return true;
+        System.out.println("Set #" + this.ID + ": " + text);
     }
+
+//    public boolean checkMatchingTiles(List<Tile> tilesToCheck) {
+//        for (Tile tileToCheck : tilesToCheck) {
+//            boolean match = false;
+//            for (Tile tile : TILES) {
+//                if (tileToCheck.checkMatchingTile(tile)) {
+//                    match = true;
+//                    break;
+//                }
+//            }
+//            if (!match) {
+//                return false;
+//            }
+//        }
+//        return true;
+//    }
 
 }

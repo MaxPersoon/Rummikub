@@ -2,25 +2,22 @@ package Main;
 
 import Players.Player;
 import Players.RandomPlayer;
+import javafx.scene.image.ImageView;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-public class Game {
+public class Game extends Thread {
 
     private static final String[] PLAYER_TYPES = {"random", "random"};
-
-    private static final List<Tile> TILES = new ArrayList<>();
+    public static final List<Tile> TILES = new ArrayList<>();
     public static final List<Set> SETS = new ArrayList<>();
     public static final List<Player> PLAYERS = new ArrayList<>();
     private static GameState currentState;
+    public static List<ImageView> tileImages;
 
-    public static void main(String[] args) {
-        run();
-    }
-
-    public static void run() {
+    public void run() {
         initialize();
         gameLoop();
     }
@@ -41,20 +38,16 @@ public class Game {
         for (String colour : colours) {
             tilesWithColour.put(colour, new ArrayList<>());
             for (int number = 1; number <= 13; number++) {
-                Tile tile = new Tile(TILES.size() + 1, number, colour, PLAYERS);
-                TILES.add(tile);
-                tilesWithColour.get(colour).add(tile);
+                Tile copy1 = new Tile(TILES.size() + 1, number, colour, tileImages.get(TILES.size()));
+                Tile copy2 = new Tile(TILES.size() + 2, number, colour, tileImages.get(TILES.size() + 1));
+                TILES.add(copy1);
+                TILES.add(copy2);
+                tilesWithColour.get(colour).add(copy1);
                 if (!tilesWithNumber.containsKey(number)) {
                     tilesWithNumber.put(number, new ArrayList<>());
                 }
-                tilesWithNumber.get(number).add(tile);
+                tilesWithNumber.get(number).add(copy1);
             }
-        }
-
-        // Make a copy of each tile
-        List<Tile> tilesCopy = List.copyOf(TILES);
-        for (Tile tile : tilesCopy) {
-            TILES.add(tile.makeCopy(TILES.size() + 1));
         }
 
 //        for (Tile tile : TILES) {
@@ -65,9 +58,11 @@ public class Game {
         for (int i = 1; i <= 13; i++) {
             List<Tile> tilesWithSpecificNumber = tilesWithNumber.get(i);
 
+            // Size 4
             Set set = new Set(SETS.size() + 1, "group", tilesWithSpecificNumber);
             SETS.add(set);
 
+            // Size 3
             for (Tile tile : tilesWithSpecificNumber) {
                 List<Tile> tilesWithSpecificNumberCopy = new ArrayList<>(List.copyOf(tilesWithSpecificNumber));
                 tilesWithSpecificNumberCopy.remove(tile);
@@ -100,7 +95,7 @@ public class Game {
 
         // Create initial GameState
         HashMap<Player, List<Tile>> racks = new HashMap<>();
-        List<Set> table = new ArrayList<>();
+        HashMap<Set, List<Tile>> table = new HashMap<>();
         List<Tile> pool = new ArrayList<>(List.copyOf(TILES));
 
         // Randomly give each player fourteen tiles
@@ -116,8 +111,7 @@ public class Game {
 
         currentState = new GameState(racks, table, pool);
         currentState.printRacks();
-        currentState.printTable();
-        //visualizeCurrentState();
+        currentState.visualize();
     }
 
     private static void gameLoop() {
@@ -133,14 +127,17 @@ public class Game {
         while (winner == null) {
             turnCounter++;
             System.out.println("\n --- TURN #" + turnCounter + " ---");
+
             for (Player player : PLAYERS) {
                 player.unstuck();
             }
+
             for (Player player : PLAYERS) {
                 currentState = player.makeMove(currentState);
                 currentState.printRack(player);
                 currentState.printTable();
-                //visualizeCurrentState();
+                currentState.visualize();
+
                 if (player.checkWin(currentState)) {
                     // Player has empty rack --> wins
                     winner = player;
@@ -171,18 +168,16 @@ public class Game {
                     }
                 }
 
-//                int counter = 0;
-//                while (counter < 1000000000) {
-//                    counter++;
-//                }
+
+                // Delay between turns
+                int counter = 0;
+                while (counter < 1000000000) {
+                    counter++;
+                }
             }
         }
 
         System.out.println("Player #" + winner.getID() + " wins");
-    }
-
-    private static void visualizeCurrentState() {
-
     }
 
 }

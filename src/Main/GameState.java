@@ -9,10 +9,10 @@ import java.util.List;
 public class GameState {
 
     private final HashMap<Player, List<Tile>> RACKS;
-    private final List<Set> TABLE;
+    private final HashMap<Set, List<Tile>> TABLE;
     private final List<Tile> POOL;
 
-    public GameState(HashMap<Player, List<Tile>> racks, List<Set> table, List<Tile> pool) {
+    public GameState(HashMap<Player, List<Tile>> racks, HashMap<Set, List<Tile>>  table, List<Tile> pool) {
         this.RACKS = racks;
         this.TABLE = table;
         this.POOL = pool;
@@ -22,7 +22,7 @@ public class GameState {
         return RACKS;
     }
 
-    public List<Set> getTABLE() {
+    public HashMap<Set, List<Tile>> getTABLE() {
         return TABLE;
     }
 
@@ -36,81 +36,56 @@ public class GameState {
 
         // Draw sets from rack on table
         for (Set set : Game.SETS) {
-            List<Tile> tilesSet = set.getTILES();
-            List<Tile> tilesToRemove = new ArrayList<>();
-            if (playerRack.size() >= tilesSet.size()) {
-                boolean matchingSet = true;
-                for (Tile tileSet : tilesSet) {
-                    boolean matchingTile = false;
-                    for (Tile playerTile : playerRack) {
-                        if (tileSet.checkMatchingTile(playerTile)) {
-                            tilesToRemove.add(playerTile);
-                            matchingTile = true;
-                            break;
-                        }
-                    }
-                    if (!matchingTile) {
-                        matchingSet = false;
-                        break;
-                    }
+            List<Tile> tilesToRemove = set.drawableFromRack(playerRack);
+
+            if (tilesToRemove.size() >= 1) {
+                // Create new GameState
+                List<Tile> newPlayerRack = new ArrayList<>(List.copyOf(playerRack));
+                for (Tile tileToRemove : tilesToRemove) {
+                    newPlayerRack.remove(tileToRemove);
                 }
 
-                if (matchingSet) {
-                    // Create new GameState
-                    List<Tile> newPlayerRack = new ArrayList<>(List.copyOf(playerRack));
-                    for (Tile tileToRemove : tilesToRemove) {
-                        newPlayerRack.remove(tileToRemove);
-                    }
+                HashMap<Player, List<Tile>> newRacks = new HashMap<>(RACKS);
+                newRacks.replace(player, newPlayerRack);
 
-                    HashMap<Player, List<Tile>> newRacks = new HashMap<>(RACKS);
-                    newRacks.replace(player, newPlayerRack);
+                HashMap<Set, List<Tile>> newTable = new HashMap<>(TABLE);
+                newTable.put(set, tilesToRemove);
 
-                    List<Set> newTable = new ArrayList<>(List.copyOf(TABLE));
-                    newTable.add(set);
+                List<Tile> newPool = new ArrayList<>(List.copyOf(POOL));
 
-                    List<Tile> newPool = new ArrayList<>(List.copyOf(POOL));
-
-                    moves.add(new GameState(newRacks, newTable, newPool));
-                }
+                moves.add(new GameState(newRacks, newTable, newPool));
             }
         }
 
         // Add tile from rack to 1) existing group and 2) front and back of existing run
-        for (Tile playerTile : playerRack) {
-            for (Set set : TABLE) {
-                List<Tile> tilesSet = set.getTILES();
-
-                if (set.getTYPE().equals("group")) {
-                    if (tilesSet.size() == 3) {
-                        if (playerTile.getNUMBER() == tilesSet.get(0).getNUMBER()) {
-                            boolean newColour = true;
-                            for (Tile tileSet : tilesSet) {
-                                if (playerTile.getCOLOUR().equals(tileSet.getCOLOUR())) {
-                                    newColour = false;
-                                    break;
-                                }
-                            }
-
-                            if (newColour) {
-                                // Create game state
-                                createGameStateForExistingSet(player, moves, playerRack, playerTile, set, tilesSet);
-                            }
-                        }
-                    }
-                }
-                else {
-                    // run
-                    if (tilesSet.size() < 13) {
-                        if (playerTile.getCOLOUR().equals(tilesSet.get(0).getCOLOUR())) {
-                            if (playerTile.getNUMBER() == tilesSet.get(0).getNUMBER() - 1 || playerTile.getNUMBER() == tilesSet.get(tilesSet.size() - 1).getNUMBER() + 1) {
-                                // Create game state
-                                createGameStateForExistingSet(player, moves, playerRack, playerTile, set, tilesSet);
-                            }
-                        }
-                    }
-                }
-            }
-        }
+//        for (Tile playerTile : playerRack) {
+//            for (Set set : TABLE) {
+//                if (set.isExpandingTile(playerTile)) {
+//                    // Create new GameState
+//                    List<Tile> newPlayerRack = new ArrayList<>(List.copyOf(playerRack));
+//                    newPlayerRack.remove(playerTile);
+//
+//                    HashMap<Player, List<Tile>> newRacks = new HashMap<>(RACKS);
+//                    newRacks.replace(player, newPlayerRack);
+//
+//                    List<Tile> newTilesSet = new ArrayList<>(List.copyOf(tilesSet));
+//                    newTilesSet.add(playerTile);
+//
+//                    List<Set> newTable = new ArrayList<>(List.copyOf(TABLE));
+//                    newTable.remove(set);
+//                    for (Set set1 : Game.SETS) {
+//                        if (set1.checkMatchingTiles(newTilesSet)) {
+//                            newTable.add(set1);
+//                            break;
+//                        }
+//                    }
+//
+//                    List<Tile> newPool = new ArrayList<>(List.copyOf(POOL));
+//
+//                    moves.add(new GameState(newRacks, newTable, newPool));
+//                }
+//            }
+//        }
 
         // If the player cannot make a move, draw a tile from the pool (if possible)
         if (moves.size() == 0) {
@@ -124,7 +99,7 @@ public class GameState {
                 HashMap<Player, List<Tile>> newRacks = new HashMap<>(RACKS);
                 newRacks.replace(player, newPlayerRack);
 
-                List<Set> newTable = new ArrayList<>(List.copyOf(TABLE));
+                HashMap<Set, List<Tile>> newTable = new HashMap<>(TABLE);
 
                 moves.add(new GameState(newRacks, newTable, newPool));
             }
@@ -133,46 +108,13 @@ public class GameState {
         return moves;
     }
 
-    private void createGameStateForExistingSet(Player player, List<GameState> moves, List<Tile> playerRack, Tile playerTile, Set set, List<Tile> tilesSet) {
-        List<Tile> newPlayerRack = new ArrayList<>(List.copyOf(playerRack));
-        newPlayerRack.remove(playerTile);
-
-        HashMap<Player, List<Tile>> newRacks = new HashMap<>(RACKS);
-        newRacks.replace(player, newPlayerRack);
-
-        List<Tile> newTilesSet = new ArrayList<>(List.copyOf(tilesSet));
-        newTilesSet.add(playerTile);
-
-        List<Set> newTable = new ArrayList<>(List.copyOf(TABLE));
-        newTable.remove(set);
-        for (Set set1 : Game.SETS) {
-            if (set1.checkMatchingTiles(newTilesSet)) {
-                newTable.add(set1);
-                break;
-            }
-        }
-
-        List<Tile> newPool = new ArrayList<>(List.copyOf(POOL));
-
-        moves.add(new GameState(newRacks, newTable, newPool));
-    }
-
     public void printRacks() {
-        System.out.println("Racks:");
         for (Player player : RACKS.keySet()) {
-            StringBuilder text = new StringBuilder();
-            for (Tile tile : RACKS.get(player)) {
-                if (!text.isEmpty()) {
-                    text.append(" | ");
-                }
-                text.append(tile.getNUMBER() + ", " + tile.getCOLOUR());
-            }
-            System.out.println("* Player #" + player.getID() + ": " + text);
+            printRack(player);
         }
     }
 
     public void printRack(Player player) {
-        System.out.println("Rack:");
         StringBuilder text = new StringBuilder();
         for (Tile tile : RACKS.get(player)) {
             if (!text.isEmpty()) {
@@ -180,20 +122,52 @@ public class GameState {
             }
             text.append(tile.getNUMBER() + ", " + tile.getCOLOUR());
         }
-        System.out.println("* Player #" + player.getID() + ": " + text);
+        System.out.println("* Player #" + player.getID() + "'s rack: " + text);
     }
 
     public void printTable() {
         System.out.println("Table:");
-        for (Set set : TABLE) {
+        for (Set set : TABLE.keySet()) {
             StringBuilder text = new StringBuilder();
-            for (Tile tile : set.getTILES()) {
+            for (Tile tile : TABLE.get(set)) {
                 if (!text.isEmpty()) {
                     text.append(" | ");
                 }
                 text.append(tile.getNUMBER() + ", " + tile.getCOLOUR());
             }
             System.out.println("* Set #" + set.getID() + ": " + text);
+        }
+    }
+
+    public void visualize() {
+        // Reset board
+        for (Tile tile : Game.TILES) {
+            tile.getImage().setVisible(false);
+        }
+
+        // Racks
+        for (int playerID = 1; playerID <= 2; playerID++) {
+            for (Player player : RACKS.keySet()) {
+                if (playerID == player.getID()) {
+                    List<Tile> rack = RACKS.get(player);
+                    List<double[]> coordinates = Main.COORDINATES_RACKS.get(playerID);
+                    for (int i = 0; i < rack.size(); i++) {
+                        rack.get(i).setImageCoordinates(coordinates.get(i));
+                    }
+                    break;
+                }
+            }
+        }
+
+        // Sets
+        List<List<Tile>> sets = TABLE.values().stream().toList();
+        for (int set = 0; set < sets.size(); set++) {
+            List<Tile> tilesInSet = sets.get(set);
+            List<double[]> coordinates = Main.COORDINATES_TABLE.get(set);
+
+            for (int tile = 0; tile < tilesInSet.size(); tile++) {
+                tilesInSet.get(tile).setImageCoordinates(coordinates.get(tile));
+            }
         }
     }
 

@@ -1,9 +1,8 @@
 package Main;
 
-import Players.Player;
+import javafx.scene.image.ImageView;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 public class Tile {
@@ -12,20 +11,14 @@ public class Tile {
     private final int NUMBER;
     private final String COLOUR;
     private final List<Set> SETS;
+    private final ImageView IMAGE;
 
-    private boolean onTable;
-    private final HashMap<Player, Integer> RACK_COUNTERS;
-
-    public Tile(int id, int number, String colour, List<Player> players) {
+    public Tile(int id, int number, String colour, ImageView image) {
         this.ID = id;
         this.NUMBER = number;
         this.COLOUR = colour;
         this.SETS = new ArrayList<>();
-        this.onTable = false;
-        this.RACK_COUNTERS = new HashMap<>();
-        for (Player player : players) {
-            RACK_COUNTERS.put(player, 0);
-        }
+        this.IMAGE = image;
     }
 
     public int getID() {
@@ -44,41 +37,25 @@ public class Tile {
         return SETS;
     }
 
-    public boolean isOnTable() {
-        return onTable;
-    }
-
-    public Integer getRackCounter(Player player) {
-        return RACK_COUNTERS.get(player);
+    public ImageView getImage() {
+        return IMAGE;
     }
 
     public void addSet(Set set) {
         this.SETS.add(set);
     }
 
-    public void setOnTable(boolean onTable) {
-        this.onTable = onTable;
-    }
-
-    public void increaseRackCounter(Player player, int increaseAmount) {
-        int newAmount = this.RACK_COUNTERS.get(player) + increaseAmount;
-        this.RACK_COUNTERS.replace(player, newAmount);
-    }
-
-    public void decreaseRackCounter(Player player, int decreaseAmount) {
-        int newAmount = this.RACK_COUNTERS.get(player) - decreaseAmount;
-        this.RACK_COUNTERS.replace(player, newAmount);
+    public void setImageCoordinates(double[] coordinates) {
+        this.IMAGE.setX(coordinates[0]);
+        this.IMAGE.setY(coordinates[1]);
+        this.IMAGE.setVisible(true);
     }
 
     public void print() {
         System.out.println("Tile #" + this.ID + ": " + this.NUMBER + ", " + this.COLOUR);
     }
 
-    public Tile makeCopy(int id) {
-        return new Tile(id, this.NUMBER, this.COLOUR, Game.PLAYERS);
-    }
-
-    public boolean checkMatchingTile(Tile tileToCheck) {
+    public boolean isMatch(Tile tileToCheck) {
         return this.NUMBER == tileToCheck.NUMBER && this.COLOUR.equals(tileToCheck.COLOUR);
     }
 
