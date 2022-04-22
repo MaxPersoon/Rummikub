@@ -66,3 +66,4 @@ out/production/Rummikub/tiles/red-9.png
 out/production/Rummikub/Main/GameState.class
 out/production/Rummikub/Players/Player.class
 out/production/Rummikub/Players/RandomPlayer.class
+out/production/Rummikub/Players/GreedyPlayer.class

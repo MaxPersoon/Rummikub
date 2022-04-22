@@ -1,28 +1,36 @@
 package Main;
 
 import Players.Player;
+import javafx.scene.text.Text;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 public class GameState {
 
-    private final HashMap<Player, List<Tile>> RACKS;
-    private final HashMap<Set, List<Tile>> TABLE;
+    private final GameState PARENT;
+    private final LinkedHashMap<Player, List<Tile>> RACKS;
+    private final LinkedHashMap<Set, List<Tile>> TABLE;
     private final List<Tile> POOL;
 
-    public GameState(HashMap<Player, List<Tile>> racks, HashMap<Set, List<Tile>>  table, List<Tile> pool) {
+    public GameState(GameState parent, LinkedHashMap<Player, List<Tile>> racks, LinkedHashMap<Set, List<Tile>>  table, List<Tile> pool) {
+        this.PARENT = parent;
         this.RACKS = racks;
         this.TABLE = table;
         this.POOL = pool;
     }
 
-    public HashMap<Player, List<Tile>> getRACKS() {
+    public GameState getPARENT() {
+        return PARENT;
+    }
+
+    public LinkedHashMap<Player, List<Tile>> getRACKS() {
         return RACKS;
     }
 
-    public HashMap<Set, List<Tile>> getTABLE() {
+    public LinkedHashMap<Set, List<Tile>> getTABLE() {
         return TABLE;
     }
 
@@ -45,15 +53,15 @@ public class GameState {
                     newPlayerRack.remove(tileToRemove);
                 }
 
-                HashMap<Player, List<Tile>> newRacks = new HashMap<>(RACKS);
+                LinkedHashMap<Player, List<Tile>> newRacks = new LinkedHashMap<>(RACKS);
                 newRacks.replace(player, newPlayerRack);
 
-                HashMap<Set, List<Tile>> newTable = new HashMap<>(TABLE);
+                LinkedHashMap<Set, List<Tile>> newTable = new LinkedHashMap<>(TABLE);
                 newTable.put(set, tilesToRemove);
 
                 List<Tile> newPool = new ArrayList<>(List.copyOf(POOL));
 
-                moves.add(new GameState(newRacks, newTable, newPool));
+                moves.add(new GameState(this, newRacks, newTable, newPool));
             }
         }
 
@@ -87,21 +95,42 @@ public class GameState {
 //            }
 //        }
 
+        // Filter out moves in which an opponent wins
+        List<GameState> filteredMoves = new ArrayList<>();
+        for (GameState move : moves) {
+            HashMap<Player, List<Tile>> racks = move.getRACKS();
+            boolean keep = true;
+            for (Player player_ : racks.keySet()) {
+                if (racks.get(player_).size() == 0) {
+                    if (player_ != player) {
+                        keep = false;
+                        break;
+                    }
+                }
+            }
+
+            if (keep) {
+                filteredMoves.add(move);
+            }
+        }
+        moves = filteredMoves;
+
         // If the player cannot make a move, draw a tile from the pool (if possible)
         if (moves.size() == 0) {
             if (POOL.size() >= 1) {
-                System.out.println("Player #" + player.getID() + " has drawn from the pool");
                 List<Tile> newPool = new ArrayList<>(List.copyOf(POOL));
+                Tile tileFromPool = newPool.remove(0);
 
                 List<Tile> newPlayerRack = new ArrayList<>(List.copyOf(playerRack));
-                newPlayerRack.add(newPool.remove(0));
+                newPlayerRack.add(tileFromPool);
+                System.out.println("Draws {" + tileFromPool.getNUMBER() + ", " + tileFromPool.getCOLOUR() + "} from the pool");
 
-                HashMap<Player, List<Tile>> newRacks = new HashMap<>(RACKS);
+                LinkedHashMap<Player, List<Tile>> newRacks = new LinkedHashMap<>(RACKS);
                 newRacks.replace(player, newPlayerRack);
 
-                HashMap<Set, List<Tile>> newTable = new HashMap<>(TABLE);
+                LinkedHashMap<Set, List<Tile>> newTable = new LinkedHashMap<>(TABLE);
 
-                moves.add(new GameState(newRacks, newTable, newPool));
+                moves.add(new GameState(this, newRacks, newTable, newPool));
             }
         }
 
@@ -110,6 +139,7 @@ public class GameState {
 
     public void printRacks() {
         for (Player player : RACKS.keySet()) {
+            System.out.print("* Player #" + player.getID() + "'s rack: ");
             printRack(player);
         }
     }
@@ -122,7 +152,7 @@ public class GameState {
             }
             text.append(tile.getNUMBER() + ", " + tile.getCOLOUR());
         }
-        System.out.println("* Player #" + player.getID() + "'s rack: " + text);
+        System.out.println(text);
     }
 
     public void printTable() {
@@ -139,6 +169,36 @@ public class GameState {
         }
     }
 
+    public void printMoveInfo(Player player) {
+        // Print new sets
+        List<Set> newSets = new ArrayList<>();
+        for (Set set : TABLE.keySet()) {
+            boolean newSet = true;
+            for (Set setParent : PARENT.TABLE.keySet()) {
+                if (set == setParent) {
+                    newSet = false;
+                    break;
+                }
+            }
+
+            if (newSet) {
+                newSets.add(set);
+            }
+        }
+
+        if (newSets.size() >= 1) {
+            System.out.println("New sets:");
+            for (Set newSet : newSets) {
+                newSet.print();
+            }
+        }
+
+        System.out.println("Rack:");
+        printRack(player);
+
+        System.out.println();
+    }
+
     public void visualize() {
         // Reset board
         for (Tile tile : Game.TILES) {
@@ -146,16 +206,11 @@ public class GameState {
         }
 
         // Racks
-        for (int playerID = 1; playerID <= 2; playerID++) {
-            for (Player player : RACKS.keySet()) {
-                if (playerID == player.getID()) {
-                    List<Tile> rack = RACKS.get(player);
-                    List<double[]> coordinates = Main.COORDINATES_RACKS.get(playerID);
-                    for (int i = 0; i < rack.size(); i++) {
-                        rack.get(i).setImageCoordinates(coordinates.get(i));
-                    }
-                    break;
-                }
+        for (Player player : RACKS.keySet()) {
+            List<Tile> rack = RACKS.get(player);
+            List<double[]> coordinates = Main.COORDINATES_RACKS.get(player.getID());
+            for (int i = 0; i < rack.size(); i++) {
+                rack.get(i).setImageCoordinates(coordinates.get(i));
             }
         }
 
@@ -169,6 +224,10 @@ public class GameState {
                 tilesInSet.get(tile).setImageCoordinates(coordinates.get(tile));
             }
         }
+
+        // Pool counter
+        Text counter = (Text) Game.nodes.get(0);
+        counter.setText(String.valueOf(POOL.size()));
     }
 
 

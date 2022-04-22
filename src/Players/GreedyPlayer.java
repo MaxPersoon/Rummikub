@@ -1,16 +1,15 @@
 package Players;
 
 import Main.GameState;
-import Main.Tile;
 
 import java.util.List;
 
-public class RandomPlayer implements Player {
+public class GreedyPlayer implements Player {
 
     private final int ID;
     private boolean stuck;
 
-    public RandomPlayer(int id) {
+    public GreedyPlayer(int id) {
         this.ID = id;
         this.stuck = false;
     }
@@ -31,19 +30,24 @@ public class RandomPlayer implements Player {
         List<GameState> moves = currentState.getMoves(this);
 
         if (moves.size() >= 1) {
-            // Return a randomly chosen move
+            // Returns the state with the smallest rack size for this player
             // Winning states are given priority
+            GameState smallestRackState = null;
+            int smallestRackSize = Integer.MAX_VALUE;
+
             for (GameState move : moves) {
-                List<Tile> playerRack = move.getRACKS().get(this);
-                if (playerRack.size() == 0) {
+                int playerRackSize = move.getRACKS().get(this).size();
+                if (playerRackSize == 0) {
                     return move;
+                }
+                else if (playerRackSize < smallestRackSize) {
+                    smallestRackState = move;
+                    smallestRackSize = playerRackSize;
                 }
             }
 
-            int randomIndex = (int) (Math.random() * moves.size());
-            GameState randomMove = moves.get(randomIndex);
-            randomMove.printMoveInfo(this);
-            return randomMove;
+            smallestRackState.printMoveInfo(this);
+            return smallestRackState;
         }
         else {
             System.out.println("Player #" + ID + " is unable to make a move\n");

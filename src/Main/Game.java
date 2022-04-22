@@ -1,21 +1,20 @@
 package Main;
 
+import Players.GreedyPlayer;
 import Players.Player;
 import Players.RandomPlayer;
+import javafx.scene.Node;
 import javafx.scene.image.ImageView;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 
 public class Game extends Thread {
 
-    private static final String[] PLAYER_TYPES = {"random", "random"};
     public static final List<Tile> TILES = new ArrayList<>();
     public static final List<Set> SETS = new ArrayList<>();
     public static final List<Player> PLAYERS = new ArrayList<>();
     private static GameState currentState;
-    public static List<ImageView> tileImages;
+    public static List<Node> nodes;
 
     public void run() {
         initialize();
@@ -24,9 +23,12 @@ public class Game extends Thread {
 
     private static void initialize() {
         // Create players
-        for (String playerType : PLAYER_TYPES) {
+        for (String playerType : Main.PLAYER_TYPES) {
             if (playerType.equals("random")) {
                 PLAYERS.add(new RandomPlayer(PLAYERS.size() + 1));
+            }
+            else if (playerType.equals("greedy")) {
+                PLAYERS.add(new GreedyPlayer(PLAYERS.size() + 1));
             }
         }
 
@@ -38,8 +40,8 @@ public class Game extends Thread {
         for (String colour : colours) {
             tilesWithColour.put(colour, new ArrayList<>());
             for (int number = 1; number <= 13; number++) {
-                Tile copy1 = new Tile(TILES.size() + 1, number, colour, tileImages.get(TILES.size()));
-                Tile copy2 = new Tile(TILES.size() + 2, number, colour, tileImages.get(TILES.size() + 1));
+                Tile copy1 = new Tile(TILES.size() + 1, number, colour, (ImageView) nodes.get(TILES.size() + 1));
+                Tile copy2 = new Tile(TILES.size() + 2, number, colour, (ImageView) nodes.get(TILES.size() + 2));
                 TILES.add(copy1);
                 TILES.add(copy2);
                 tilesWithColour.get(colour).add(copy1);
@@ -94,9 +96,10 @@ public class Game extends Thread {
 //        }
 
         // Create initial GameState
-        HashMap<Player, List<Tile>> racks = new HashMap<>();
-        HashMap<Set, List<Tile>> table = new HashMap<>();
+        LinkedHashMap<Player, List<Tile>> racks = new LinkedHashMap<>();
+        LinkedHashMap<Set, List<Tile>> table = new LinkedHashMap<>();
         List<Tile> pool = new ArrayList<>(List.copyOf(TILES));
+        Collections.shuffle(pool);
 
         // Randomly give each player fourteen tiles
         for (int i = 0; i < 14; i++) {
@@ -109,33 +112,24 @@ public class Game extends Thread {
             }
         }
 
-        currentState = new GameState(racks, table, pool);
+        currentState = new GameState(null, racks, table, pool);
         currentState.printRacks();
         currentState.visualize();
     }
 
     private static void gameLoop() {
-        // while no player has won {
-        //   for every player {
-        //     player determines next game state
-        //     visualize new game state
-        //     stop if game state is a winning state
-        //   }
-        // }
         int turnCounter = 0;
         Player winner = null;
+
         while (winner == null) {
             turnCounter++;
-            System.out.println("\n --- TURN #" + turnCounter + " ---");
+            System.out.println("\n--- TURN #" + turnCounter + " ---");
 
             for (Player player : PLAYERS) {
                 player.unstuck();
-            }
 
-            for (Player player : PLAYERS) {
+                System.out.println("/ Player #" + player.getID() + " \\");
                 currentState = player.makeMove(currentState);
-                currentState.printRack(player);
-                currentState.printTable();
                 currentState.visualize();
 
                 if (player.checkWin(currentState)) {
@@ -143,37 +137,36 @@ public class Game extends Thread {
                     winner = player;
                     break;
                 }
-                else {
-                    boolean allStuck = true;
-                    int smallestRackSize = Integer.MAX_VALUE;
-                    Player playerWithSmallestRackSize = null;
-                    for (Player player1 : PLAYERS) {
-                        if (!player1.isStuck()) {
-                            allStuck = false;
-                            break;
-                        }
-                        else {
-                            int playerRackSize = currentState.getRACKS().get(player).size();
-                            if (playerRackSize < smallestRackSize) {
-                                smallestRackSize = playerRackSize;
-                                playerWithSmallestRackSize = player1;
-                            }
-                        }
-                    }
 
-                    if (allStuck) {
-                        // All players are stuck --> player with the smallest rack size wins
-                        winner = playerWithSmallestRackSize;
-                        break;
-                    }
-                }
-
-
-                // Delay between turns
+                // Delay between players making moves
                 int counter = 0;
                 while (counter < 1000000000) {
                     counter++;
                 }
+            }
+
+            // Additional win scenario: all players are stuck
+            boolean allStuck = true;
+            Player playerWithSmallestRackSize = null;
+            int smallestRackSize = Integer.MAX_VALUE;
+            for (Player player : PLAYERS) {
+                if (!player.isStuck()) {
+                    allStuck = false;
+                    break;
+                }
+                else {
+                    int playerRackSize = currentState.getRACKS().get(player).size();
+                    if (playerRackSize < smallestRackSize) {
+                        smallestRackSize = playerRackSize;
+                        playerWithSmallestRackSize = player;
+                    }
+                }
+            }
+
+            if (allStuck) {
+                // All players are stuck --> player with the smallest rack size wins
+                winner = playerWithSmallestRackSize;
+                break;
             }
         }
 
