@@ -42,40 +42,21 @@ public class Set {
         List<Tile> tilesInSet = new ArrayList<>();
 
         if (rack.size() >= TILES.size()) {
-            for (List<Tile> copies : TILES) {
-                boolean copyFound = false;
-
-                for (Tile copy : copies) {
-                    if (!copyFound) {
-                        for (Tile tileRack : rack) {
-                            if (copy == tileRack) {
-                                copyFound = true;
-                                tilesInSet.add(copy);
-                                break;
-                            }
-                        }
-                    }
-                }
-
-                if (!copyFound) {
-                    tilesInSet.clear();
-                    break;
-                }
-            }
+            tilesInSet = checkMatchingTiles(rack);
         }
 
         return tilesInSet;
     }
 
-    public boolean isExpandingTile(Tile expandingTile) {
+    public boolean isExpandingTile(Tile tileToCheck) {
         boolean isExpandingTile = false;
 
         if (TYPE.equals("group")) {
             if (TILES.size() == 3) {
-                if (expandingTile.getNUMBER() == TILES.get(0).get(0).getNUMBER()) {
+                if (tileToCheck.getNUMBER() == TILES.get(0).get(0).getNUMBER()) {
                     isExpandingTile = true;
                     for (List<Tile> copies : TILES) {
-                        if (expandingTile.getCOLOUR().equals(copies.get(0).getCOLOUR())) {
+                        if (tileToCheck.getCOLOUR().equals(copies.get(0).getCOLOUR())) {
                             isExpandingTile = false;
                             break;
                         }
@@ -86,8 +67,8 @@ public class Set {
         else {
             // run
             if (TILES.size() < 13) {
-                if (expandingTile.getCOLOUR().equals(TILES.get(0).get(0).getCOLOUR())) {
-                    if (expandingTile.getNUMBER() == TILES.get(0).get(0).getNUMBER() - 1 || expandingTile.getNUMBER() == TILES.get(TILES.size() - 1).get(0).getNUMBER() + 1) {
+                if (tileToCheck.getCOLOUR().equals(TILES.get(0).get(0).getCOLOUR())) {
+                    if (tileToCheck.getNUMBER() == TILES.get(0).get(0).getNUMBER() - 1 || tileToCheck.getNUMBER() == TILES.get(TILES.size() - 1).get(0).getNUMBER() + 1) {
                         isExpandingTile = true;
                     }
                 }
@@ -130,20 +111,43 @@ public class Set {
         System.out.println("Set #" + this.ID + ": " + text);
     }
 
-//    public boolean checkMatchingTiles(List<Tile> tilesToCheck) {
-//        for (Tile tileToCheck : tilesToCheck) {
-//            boolean match = false;
-//            for (Tile tile : TILES) {
-//                if (tileToCheck.checkMatchingTile(tile)) {
-//                    match = true;
-//                    break;
-//                }
-//            }
-//            if (!match) {
-//                return false;
-//            }
-//        }
-//        return true;
-//    }
+    public List<Tile> checkMatchingTiles(List<Tile> tilesToCheck) {
+        // Returns a list of tiles from tilesToCheck needed to construct this set
+        // If this set cannot be constructed using the tiles in tilesToCheck, tilesInSet will be empty
+        List<Tile> tilesInSet = new ArrayList<>();
+
+        for (List<Tile> copies : TILES) {
+            boolean copyFound = false;
+
+            for (Tile copy : copies) {
+                if (!copyFound) {
+                    for (Tile tileToCheck : tilesToCheck) {
+                        if (copy == tileToCheck) {
+                            copyFound = true;
+                            tilesInSet.add(copy);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!copyFound) {
+                tilesInSet.clear();
+                break;
+            }
+        }
+
+        return tilesInSet;
+    }
+
+    public List<Tile> isExactMatch(List<Tile> tilesToCheck) {
+        List<Tile> tilesInSet = new ArrayList<>();
+
+        if (tilesToCheck.size() == TILES.size()) {
+            tilesInSet = checkMatchingTiles(tilesToCheck);
+        }
+
+        return tilesInSet;
+    }
 
 }

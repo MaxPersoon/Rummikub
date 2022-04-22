@@ -4,7 +4,6 @@ import Players.Player;
 import javafx.scene.text.Text;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 
@@ -46,7 +45,7 @@ public class GameState {
         for (Set set : Game.SETS) {
             List<Tile> tilesToRemove = set.drawableFromRack(playerRack);
 
-            if (tilesToRemove.size() >= 1) {
+            if (tilesToRemove.size() >= 3) {
                 // Create new GameState
                 List<Tile> newPlayerRack = new ArrayList<>(List.copyOf(playerRack));
                 for (Tile tileToRemove : tilesToRemove) {
@@ -65,40 +64,41 @@ public class GameState {
             }
         }
 
-        // Add tile from rack to 1) existing group and 2) front and back of existing run
-//        for (Tile playerTile : playerRack) {
-//            for (Set set : TABLE) {
-//                if (set.isExpandingTile(playerTile)) {
-//                    // Create new GameState
-//                    List<Tile> newPlayerRack = new ArrayList<>(List.copyOf(playerRack));
-//                    newPlayerRack.remove(playerTile);
-//
-//                    HashMap<Player, List<Tile>> newRacks = new HashMap<>(RACKS);
-//                    newRacks.replace(player, newPlayerRack);
-//
-//                    List<Tile> newTilesSet = new ArrayList<>(List.copyOf(tilesSet));
-//                    newTilesSet.add(playerTile);
-//
-//                    List<Set> newTable = new ArrayList<>(List.copyOf(TABLE));
-//                    newTable.remove(set);
-//                    for (Set set1 : Game.SETS) {
-//                        if (set1.checkMatchingTiles(newTilesSet)) {
-//                            newTable.add(set1);
-//                            break;
-//                        }
-//                    }
-//
-//                    List<Tile> newPool = new ArrayList<>(List.copyOf(POOL));
-//
-//                    moves.add(new GameState(newRacks, newTable, newPool));
-//                }
-//            }
-//        }
+        // Add one tile from rack to 1) existing group and 2) front and back of existing run
+        for (Tile playerTile : playerRack) {
+            for (Set set : TABLE.keySet()) {
+                if (set.isExpandingTile(playerTile)) {
+                    // Create new GameState
+                    List<Tile> newPlayerRack = new ArrayList<>(List.copyOf(playerRack));
+                    newPlayerRack.remove(playerTile);
+
+                    LinkedHashMap<Player, List<Tile>> newRacks = new LinkedHashMap<>(RACKS);
+                    newRacks.replace(player, newPlayerRack);
+
+                    List<Tile> newTilesSet = new ArrayList<>(List.copyOf(TABLE.get(set)));
+                    newTilesSet.add(playerTile);
+
+                    LinkedHashMap<Set, List<Tile>> newTable = new LinkedHashMap<>(TABLE);
+                    newTable.remove(set);
+                    for (Set set_ : Game.SETS) {
+                        List<Tile> tilesInSet = set_.isExactMatch(newTilesSet);
+                        if (tilesInSet.size() > 0) {
+                            newTable.put(set_, tilesInSet);
+                            break;
+                        }
+                    }
+
+                    List<Tile> newPool = new ArrayList<>(List.copyOf(POOL));
+
+                    moves.add(new GameState(this, newRacks, newTable, newPool));
+                }
+            }
+        }
 
         // Filter out moves in which an opponent wins
         List<GameState> filteredMoves = new ArrayList<>();
         for (GameState move : moves) {
-            HashMap<Player, List<Tile>> racks = move.getRACKS();
+            LinkedHashMap<Player, List<Tile>> racks = move.getRACKS();
             boolean keep = true;
             for (Player player_ : racks.keySet()) {
                 if (racks.get(player_).size() == 0) {
@@ -170,6 +170,28 @@ public class GameState {
     }
 
     public void printMoveInfo(Player player) {
+        // Print removed sets
+        List<Set> removedSets = new ArrayList<>();
+        for (Set setParent : PARENT.TABLE.keySet()) {
+            boolean removedSet = true;
+            for (Set set : TABLE.keySet()) {
+                if (set == setParent) {
+                    removedSet = false;
+                    break;
+                }
+            }
+
+            if (removedSet) {
+                removedSets.add(setParent);
+            }
+        }
+
+        if (removedSets.size() >= 1) {
+            System.out.println("Removed sets:");
+            for (Set removedSet : removedSets) {
+                removedSet.print();
+            }
+        }
         // Print new sets
         List<Set> newSets = new ArrayList<>();
         for (Set set : TABLE.keySet()) {
