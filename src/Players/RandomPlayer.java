@@ -42,6 +42,7 @@ public class RandomPlayer implements Player {
 
             int randomIndex = (int) (Math.random() * moves.size());
             GameState randomMove = moves.get(randomIndex);
+            randomMove.setParent(currentState); // IMPORTANT FOR PROPER TERMINAL OUTPUT
             randomMove.printMoveInfo(this);
             return randomMove;
         }

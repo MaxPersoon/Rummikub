@@ -46,6 +46,7 @@ public class GreedyPlayer implements Player {
                 }
             }
 
+            smallestRackState.setParent(currentState); // // IMPORTANT FOR PROPER TERMINAL OUTPUT
             smallestRackState.printMoveInfo(this);
             return smallestRackState;
         }

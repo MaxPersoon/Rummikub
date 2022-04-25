@@ -119,9 +119,9 @@ public class Game extends Thread {
 
     private static void gameLoop() {
         int turnCounter = 0;
-        Player winner = null;
+        List<Player> winners = new ArrayList<>();
 
-        while (winner == null) {
+        while (winners.isEmpty()) {
             turnCounter++;
             System.out.println("\n--- TURN #" + turnCounter + " ---");
 
@@ -134,20 +134,20 @@ public class Game extends Thread {
 
                 if (player.checkWin(currentState)) {
                     // Player has empty rack --> wins
-                    winner = player;
+                    winners.add(player);
                     break;
                 }
 
                 // Delay between players making moves
                 int counter = 0;
-                while (counter < 1000000000) {
+                while (counter < 100000000) {
                     counter++;
                 }
             }
 
             // Additional win scenario: all players are stuck
             boolean allStuck = true;
-            Player playerWithSmallestRackSize = null;
+            List<Player> playersWithSmallestRackSize = new ArrayList<>();
             int smallestRackSize = Integer.MAX_VALUE;
             for (Player player : PLAYERS) {
                 if (!player.isStuck()) {
@@ -157,20 +157,32 @@ public class Game extends Thread {
                 else {
                     int playerRackSize = currentState.getRACKS().get(player).size();
                     if (playerRackSize < smallestRackSize) {
+                        playersWithSmallestRackSize = new ArrayList<>();
+                        playersWithSmallestRackSize.add(player);
                         smallestRackSize = playerRackSize;
-                        playerWithSmallestRackSize = player;
+                    }
+                    else if (playerRackSize == smallestRackSize) {
+                        playersWithSmallestRackSize.add(player);
                     }
                 }
             }
 
             if (allStuck) {
-                // All players are stuck --> player with the smallest rack size wins
-                winner = playerWithSmallestRackSize;
+                // All players are stuck --> players with the smallest rack size win
+                winners = playersWithSmallestRackSize;
                 break;
             }
         }
 
-        System.out.println("Player #" + winner.getID() + " wins");
+        if (winners.size() == 1) {
+            System.out.println("Player #" + winners.get(0).getID() + " wins");
+        }
+        else {
+            System.out.println("It's a tie!\nWinners:");
+            for (Player winner : winners) {
+                System.out.println("- Player #" + winner.getID());
+            }
+        }
     }
 
 }

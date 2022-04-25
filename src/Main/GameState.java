@@ -9,20 +9,20 @@ import java.util.List;
 
 public class GameState {
 
-    private final GameState PARENT;
+    private GameState parent;
     private final LinkedHashMap<Player, List<Tile>> RACKS;
     private final LinkedHashMap<Set, List<Tile>> TABLE;
     private final List<Tile> POOL;
 
     public GameState(GameState parent, LinkedHashMap<Player, List<Tile>> racks, LinkedHashMap<Set, List<Tile>>  table, List<Tile> pool) {
-        this.PARENT = parent;
+        this.parent = parent;
         this.RACKS = racks;
         this.TABLE = table;
         this.POOL = pool;
     }
 
-    public GameState getPARENT() {
-        return PARENT;
+    public GameState getParent() {
+        return parent;
     }
 
     public LinkedHashMap<Player, List<Tile>> getRACKS() {
@@ -37,7 +37,38 @@ public class GameState {
         return POOL;
     }
 
+    public void setParent(GameState parent) {
+        this.parent = parent;
+    }
+
     public List<GameState> getMoves(Player player) {
+        List<GameState> allMoves = new ArrayList<>();
+
+        recursivelyEnumerateMoves(player, allMoves);
+
+        // If the player cannot make a move, draw a tile from the pool (if possible)
+        if (allMoves.size() == 0) {
+            if (POOL.size() >= 1) {
+                List<Tile> newPool = new ArrayList<>(List.copyOf(POOL));
+                Tile tileFromPool = newPool.remove(0);
+
+                List<Tile> newPlayerRack = new ArrayList<>(List.copyOf(this.RACKS.get(player)));
+                newPlayerRack.add(tileFromPool);
+                System.out.println("Draws {" + tileFromPool.getNUMBER() + ", " + tileFromPool.getCOLOUR() + "} from the pool");
+
+                LinkedHashMap<Player, List<Tile>> newRacks = new LinkedHashMap<>(RACKS);
+                newRacks.replace(player, newPlayerRack);
+
+                LinkedHashMap<Set, List<Tile>> newTable = new LinkedHashMap<>(TABLE);
+
+                allMoves.add(new GameState(this, newRacks, newTable, newPool));
+            }
+        }
+
+        return allMoves;
+    }
+
+    public void recursivelyEnumerateMoves(Player player, List<GameState> allMoves) {
         List<GameState> moves = new ArrayList<>();
         List<Tile> playerRack = this.RACKS.get(player);
 
@@ -48,9 +79,7 @@ public class GameState {
             if (tilesToRemove.size() >= 3) {
                 // Create new GameState
                 List<Tile> newPlayerRack = new ArrayList<>(List.copyOf(playerRack));
-                for (Tile tileToRemove : tilesToRemove) {
-                    newPlayerRack.remove(tileToRemove);
-                }
+                newPlayerRack.removeAll(tilesToRemove);
 
                 LinkedHashMap<Player, List<Tile>> newRacks = new LinkedHashMap<>(RACKS);
                 newRacks.replace(player, newPlayerRack);
@@ -114,27 +143,12 @@ public class GameState {
             }
         }
         moves = filteredMoves;
+        allMoves.addAll(moves);
 
-        // If the player cannot make a move, draw a tile from the pool (if possible)
-        if (moves.size() == 0) {
-            if (POOL.size() >= 1) {
-                List<Tile> newPool = new ArrayList<>(List.copyOf(POOL));
-                Tile tileFromPool = newPool.remove(0);
-
-                List<Tile> newPlayerRack = new ArrayList<>(List.copyOf(playerRack));
-                newPlayerRack.add(tileFromPool);
-                System.out.println("Draws {" + tileFromPool.getNUMBER() + ", " + tileFromPool.getCOLOUR() + "} from the pool");
-
-                LinkedHashMap<Player, List<Tile>> newRacks = new LinkedHashMap<>(RACKS);
-                newRacks.replace(player, newPlayerRack);
-
-                LinkedHashMap<Set, List<Tile>> newTable = new LinkedHashMap<>(TABLE);
-
-                moves.add(new GameState(this, newRacks, newTable, newPool));
-            }
+        // Recursive call
+        for (GameState move : moves) {
+            move.recursivelyEnumerateMoves(player, allMoves);
         }
-
-        return moves;
     }
 
     public void printRacks() {
@@ -172,7 +186,7 @@ public class GameState {
     public void printMoveInfo(Player player) {
         // Print removed sets
         List<Set> removedSets = new ArrayList<>();
-        for (Set setParent : PARENT.TABLE.keySet()) {
+        for (Set setParent : parent.TABLE.keySet()) {
             boolean removedSet = true;
             for (Set set : TABLE.keySet()) {
                 if (set == setParent) {
@@ -196,7 +210,7 @@ public class GameState {
         List<Set> newSets = new ArrayList<>();
         for (Set set : TABLE.keySet()) {
             boolean newSet = true;
-            for (Set setParent : PARENT.TABLE.keySet()) {
+            for (Set setParent : parent.TABLE.keySet()) {
                 if (set == setParent) {
                     newSet = false;
                     break;

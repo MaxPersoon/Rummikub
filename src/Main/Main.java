@@ -22,7 +22,7 @@ import java.util.List;
 
 public class Main extends Application {
 
-    public static final String[] PLAYER_TYPES = {"random", "greedy"};
+    public static final String[] PLAYER_TYPES = {"greedy", "greedy"};
     public static final LinkedHashMap<Integer, List<double[]>> COORDINATES_RACKS = new LinkedHashMap<>(); // maps playerIDs to list of coordinates
     public static final List<List<double[]>> COORDINATES_TABLE = new ArrayList<>(); // each entry is a list of coordinates forming a set
 
