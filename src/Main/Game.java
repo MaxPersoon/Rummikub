@@ -13,7 +13,8 @@ public class Game extends Thread {
     public static final List<Tile> TILES = new ArrayList<>();
     public static final List<Set> SETS = new ArrayList<>();
     public static final List<Player> PLAYERS = new ArrayList<>();
-    private static GameState currentState;
+    public static final List<GameState> PREVIOUS_STATES = new ArrayList<>();
+    public static GameState currentState;
     public static List<Node> nodes;
 
     public void run() {
@@ -130,6 +131,7 @@ public class Game extends Thread {
                 player.unstuck();
 
                 System.out.println("/ Player #" + player.getID() + " \\");
+                PREVIOUS_STATES.add(currentState);
                 currentState = player.makeMove(currentState);
                 currentState.visualize();
 
