@@ -97,16 +97,17 @@ public class Game extends Thread {
 
         // Create initial GameState
         LinkedHashMap<Player, List<Tile>> racks = new LinkedHashMap<>();
-        LinkedHashMap<Set, List<Tile>> table = new LinkedHashMap<>();
+        LinkedHashMap<Set, List<List<Tile>>> table = new LinkedHashMap<>();
         List<Tile> pool = new ArrayList<>(List.copyOf(TILES));
         Collections.shuffle(pool);
+
+        for (Player player : PLAYERS) {
+            racks.put(player, new ArrayList<>());
+        }
 
         // Randomly give each player fourteen tiles
         for (int i = 0; i < 14; i++) {
             for (Player player : PLAYERS) {
-                if (!racks.containsKey(player)) {
-                    racks.put(player, new ArrayList<>());
-                }
                 int randomIndex = (int) (Math.random() * pool.size());
                 racks.get(player).add(pool.remove(randomIndex));
             }

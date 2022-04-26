@@ -11,10 +11,10 @@ public class GameState {
 
     private GameState parent;
     private final LinkedHashMap<Player, List<Tile>> RACKS;
-    private final LinkedHashMap<Set, List<Tile>> TABLE;
+    private final LinkedHashMap<Set, List<List<Tile>>> TABLE;
     private final List<Tile> POOL;
 
-    public GameState(GameState parent, LinkedHashMap<Player, List<Tile>> racks, LinkedHashMap<Set, List<Tile>>  table, List<Tile> pool) {
+    public GameState(GameState parent, LinkedHashMap<Player, List<Tile>> racks, LinkedHashMap<Set, List<List<Tile>>>  table, List<Tile> pool) {
         this.parent = parent;
         this.RACKS = racks;
         this.TABLE = table;
@@ -29,7 +29,7 @@ public class GameState {
         return RACKS;
     }
 
-    public LinkedHashMap<Set, List<Tile>> getTABLE() {
+    public LinkedHashMap<Set, List<List<Tile>>> getTABLE() {
         return TABLE;
     }
 
@@ -59,7 +59,8 @@ public class GameState {
                 LinkedHashMap<Player, List<Tile>> newRacks = new LinkedHashMap<>(RACKS);
                 newRacks.replace(player, newPlayerRack);
 
-                LinkedHashMap<Set, List<Tile>> newTable = new LinkedHashMap<>(TABLE);
+                LinkedHashMap<Set, List<List<Tile>>> newTable = new LinkedHashMap<>(TABLE);
+                newTable.replaceAll((s, v) -> new ArrayList<>(List.copyOf(newTable.get(s))));
 
                 allMoves.add(new GameState(this, newRacks, newTable, newPool));
             }
@@ -84,8 +85,12 @@ public class GameState {
                 LinkedHashMap<Player, List<Tile>> newRacks = new LinkedHashMap<>(RACKS);
                 newRacks.replace(player, newPlayerRack);
 
-                LinkedHashMap<Set, List<Tile>> newTable = new LinkedHashMap<>(TABLE);
-                newTable.put(set, tilesToRemove);
+                LinkedHashMap<Set, List<List<Tile>>> newTable = new LinkedHashMap<>(TABLE);
+                newTable.replaceAll((s, v) -> new ArrayList<>(List.copyOf(newTable.get(s))));
+                if (!newTable.containsKey(set)) {
+                    newTable.put(set, new ArrayList<>());
+                }
+                newTable.get(set).add(tilesToRemove);
 
                 List<Tile> newPool = new ArrayList<>(List.copyOf(POOL));
 
@@ -97,29 +102,40 @@ public class GameState {
         for (Tile playerTile : playerRack) {
             for (Set set : TABLE.keySet()) {
                 if (set.isExpandingTile(playerTile)) {
-                    // Create new GameState
-                    List<Tile> newPlayerRack = new ArrayList<>(List.copyOf(playerRack));
-                    newPlayerRack.remove(playerTile);
+                    for (List<Tile> instanceOnTable : TABLE.get(set)) {
+                        // Create new GameState
+                        List<Tile> newPlayerRack = new ArrayList<>(List.copyOf(playerRack));
+                        newPlayerRack.remove(playerTile);
 
-                    LinkedHashMap<Player, List<Tile>> newRacks = new LinkedHashMap<>(RACKS);
-                    newRacks.replace(player, newPlayerRack);
+                        LinkedHashMap<Player, List<Tile>> newRacks = new LinkedHashMap<>(RACKS);
+                        newRacks.replace(player, newPlayerRack);
 
-                    List<Tile> newTilesSet = new ArrayList<>(List.copyOf(TABLE.get(set)));
-                    newTilesSet.add(playerTile);
+                        List<Tile> newTilesSet = new ArrayList<>(List.copyOf(instanceOnTable));
+                        newTilesSet.add(playerTile);
 
-                    LinkedHashMap<Set, List<Tile>> newTable = new LinkedHashMap<>(TABLE);
-                    newTable.remove(set);
-                    for (Set set_ : Game.SETS) {
-                        List<Tile> tilesInSet = set_.isExactMatch(newTilesSet);
-                        if (tilesInSet.size() > 0) {
-                            newTable.put(set_, tilesInSet);
-                            break;
+                        LinkedHashMap<Set, List<List<Tile>>> newTable = new LinkedHashMap<>(TABLE);
+                        newTable.replaceAll((s, v) -> new ArrayList<>(List.copyOf(newTable.get(s))));
+                        if (newTable.get(set).size() == 1) {
+                            newTable.remove(set);
                         }
+                        else {
+                            newTable.get(set).remove(instanceOnTable);
+                        }
+                        for (Set set_ : Game.SETS) {
+                            List<Tile> tilesInSet = set_.isExactMatch(newTilesSet);
+                            if (tilesInSet.size() > 0) {
+                                if (!newTable.containsKey(set_)) {
+                                    newTable.put(set_, new ArrayList<>());
+                                }
+                                newTable.get(set_).add(tilesInSet);
+                                break;
+                            }
+                        }
+
+                        List<Tile> newPool = new ArrayList<>(List.copyOf(POOL));
+
+                        moves.add(new GameState(this, newRacks, newTable, newPool));
                     }
-
-                    List<Tile> newPool = new ArrayList<>(List.copyOf(POOL));
-
-                    moves.add(new GameState(this, newRacks, newTable, newPool));
                 }
             }
         }
@@ -172,14 +188,16 @@ public class GameState {
     public void printTable() {
         System.out.println("Table:");
         for (Set set : TABLE.keySet()) {
-            StringBuilder text = new StringBuilder();
-            for (Tile tile : TABLE.get(set)) {
-                if (!text.isEmpty()) {
-                    text.append(" | ");
+            for (List<Tile> instanceOnTable : TABLE.get(set)) {
+                StringBuilder text = new StringBuilder();
+                for (Tile tile : instanceOnTable) {
+                    if (!text.isEmpty()) {
+                        text.append(" | ");
+                    }
+                    text.append(tile.getNUMBER() + ", " + tile.getCOLOUR());
                 }
-                text.append(tile.getNUMBER() + ", " + tile.getCOLOUR());
+                System.out.println("* Set #" + set.getID() + ": " + text);
             }
-            System.out.println("* Set #" + set.getID() + ": " + text);
         }
     }
 
@@ -187,16 +205,17 @@ public class GameState {
         // Print removed sets
         List<Set> removedSets = new ArrayList<>();
         for (Set setParent : parent.TABLE.keySet()) {
-            boolean removedSet = true;
-            for (Set set : TABLE.keySet()) {
-                if (set == setParent) {
-                    removedSet = false;
-                    break;
-                }
+            int timesRemoved = parent.TABLE.get(setParent).size();
+
+            if (TABLE.containsKey(setParent)) {
+                int instanceAmount = TABLE.get(setParent).size();
+                timesRemoved -= instanceAmount;
             }
 
-            if (removedSet) {
-                removedSets.add(setParent);
+            if (timesRemoved >= 1) {
+                for (int i = 0; i < timesRemoved; i++) {
+                    removedSets.add(setParent);
+                }
             }
         }
 
@@ -206,19 +225,21 @@ public class GameState {
                 removedSet.print();
             }
         }
+
         // Print new sets
         List<Set> newSets = new ArrayList<>();
         for (Set set : TABLE.keySet()) {
-            boolean newSet = true;
-            for (Set setParent : parent.TABLE.keySet()) {
-                if (set == setParent) {
-                    newSet = false;
-                    break;
-                }
+            int timesAdded = TABLE.get(set).size();
+
+            if (parent.TABLE.containsKey(set)) {
+                int instanceAmount = parent.TABLE.get(set).size();
+                timesAdded -= instanceAmount;
             }
 
-            if (newSet) {
-                newSets.add(set);
+            if (timesAdded >= 1) {
+                for (int i = 0; i < timesAdded; i++) {
+                    newSets.add(set);
+                }
             }
         }
 
@@ -251,13 +272,16 @@ public class GameState {
         }
 
         // Sets
-        List<List<Tile>> sets = TABLE.values().stream().toList();
-        for (int set = 0; set < sets.size(); set++) {
-            List<Tile> tilesInSet = sets.get(set);
-            List<double[]> coordinates = Main.COORDINATES_TABLE.get(set);
+        int instanceCounter = 0;
+        for (Set set : TABLE.keySet()) {
+            for (List<Tile> instanceOnTable : TABLE.get(set)) {
+                List<double[]> coordinates = Main.COORDINATES_TABLE.get(instanceCounter);
 
-            for (int tile = 0; tile < tilesInSet.size(); tile++) {
-                tilesInSet.get(tile).setImageCoordinates(coordinates.get(tile));
+                for (int tile = 0; tile < instanceOnTable.size(); tile++) {
+                    instanceOnTable.get(tile).setImageCoordinates(coordinates.get(tile));
+                }
+
+                instanceCounter++;
             }
         }
 

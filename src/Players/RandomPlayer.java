@@ -36,6 +36,8 @@ public class RandomPlayer implements Player {
             for (GameState move : moves) {
                 List<Tile> playerRack = move.getRACKS().get(this);
                 if (playerRack.size() == 0) {
+                    move.setParent(currentState); // IMPORTANT FOR PROPER TERMINAL OUTPUT
+                    move.printMoveInfo(this);
                     return move;
                 }
             }
