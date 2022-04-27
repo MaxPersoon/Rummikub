@@ -46,6 +46,15 @@ public class GameState {
 
         recursivelyEnumerateMoves(player, allMoves);
 
+        // Filter out invalid states
+        List<GameState> filteredList = new ArrayList<>();
+        for (GameState move : allMoves) {
+            if (move.RACKS.get(player).size() < RACKS.get(player).size()) {
+                filteredList.add(move);
+            }
+        }
+        allMoves = filteredList;
+
         // If the player cannot make a move, draw a tile from the pool (if possible)
         if (allMoves.size() == 0) {
             if (POOL.size() >= 1) {
@@ -95,7 +104,9 @@ public class GameState {
                     List<Tile> setInstance = TABLE.get(set).get(0);
                     List<Tile> newSetInstance = new ArrayList<>(List.copyOf(setInstance));
                     newSetInstance.add(playerTile);
-                    move.replaceSetInstance(set, setInstance, newSetInstance);
+                    LinkedHashMap<Set, List<Tile>> setInstances = new LinkedHashMap<>();
+                    setInstances.put(set, setInstance);
+                    move.replaceSetInstances(setInstances, newSetInstance);
 
                     if (!move.checkForDuplicates(allMoves)) {
                         allMoves.add(move);
@@ -105,8 +116,8 @@ public class GameState {
             }
         }
 
-        // Remove a fourth tile from a group and use it to form a new set
-        // Remove the first and last tile from a run and use it to form a new set
+        // Remove a fourth tile from a group (here) and use it to form a new set (recursively)
+        // Remove the first and last tile from a run (here) and use it to form a new set (recursively)
         for (Set set : TABLE.keySet()) {
             if (set.getTILES().size() >= 4) {
                 List<Tile> setInstance = TABLE.get(set).get(0);
@@ -128,10 +139,50 @@ public class GameState {
                     move.RACKS.get(player).add(tile);
                     List<Tile> newSetInstance = new ArrayList<>(List.copyOf(setInstance));
                     newSetInstance.remove(tile);
-                    move.replaceSetInstance(set, setInstance, newSetInstance);
+                    LinkedHashMap<Set, List<Tile>> setInstances = new LinkedHashMap<>();
+                    setInstances.put(set, setInstance);
+                    move.replaceSetInstances(setInstances, newSetInstance);
 
                     if (!move.checkForDuplicates(allMoves)) {
+                        allMoves.add(move);
                         move.recursivelyEnumerateMoves(player, allMoves);
+                    }
+                }
+            }
+        }
+
+        // Merge two runs to make a new set
+        for (Set set1 : TABLE.keySet()) {
+            if (set1.getTYPE().equals("run")) {
+                for (Set set2 : TABLE.keySet()) {
+                    if (set2.getTYPE().equals("run") && set1 != set2) {
+                        List<Tile> set1Instance = TABLE.get(set1).get(0);
+                        Tile set1FirstTile = set1Instance.get(0);
+                        Tile set1LastTile = set1Instance.get(set1Instance.size() - 1);
+                        List<Tile> set2Instance = TABLE.get(set2).get(0);
+                        Tile set2FirstTile = set2Instance.get(0);
+                        Tile set2LastTile = set2Instance.get(set2Instance.size() - 1);
+
+                        if (set1FirstTile.getCOLOUR().equals(set2FirstTile.getCOLOUR())) {
+                            if (set1LastTile.getNUMBER() == set2FirstTile.getNUMBER() - 1 ||
+                                set1FirstTile.getNUMBER() == set2LastTile.getNUMBER() + 1) {
+                                // Perform move
+                                GameState move = createChild();
+
+                                List<Tile> newSetInstance = new ArrayList<>();
+                                newSetInstance.addAll(set1Instance);
+                                newSetInstance.addAll(set2Instance);
+                                LinkedHashMap<Set, List<Tile>> setInstances = new LinkedHashMap<>();
+                                setInstances.put(set1, set1Instance);
+                                setInstances.put(set2, set2Instance);
+                                move.replaceSetInstances(setInstances, newSetInstance);
+
+                                if (!move.checkForDuplicates(allMoves)) {
+                                    allMoves.add(move);
+                                    move.recursivelyEnumerateMoves(player, allMoves);
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -167,8 +218,10 @@ public class GameState {
         }
     }
 
-    private void replaceSetInstance(Set set, List<Tile> setInstance, List<Tile> newSetInstance) {
-        removeSetInstance(set, setInstance);
+    private void replaceSetInstances(LinkedHashMap<Set, List<Tile>> setInstances, List<Tile> newSetInstance) {
+        for (Set set : setInstances.keySet()) {
+            removeSetInstance(set, setInstances.get(set));
+        }
 
         for (Set set_ : Game.SETS) {
             List<Tile> tilesInSet = set_.isExactMatch(newSetInstance);
