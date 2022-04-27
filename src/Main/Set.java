@@ -116,18 +116,16 @@ public class Set {
         // If this set cannot be constructed using the tiles in tilesToCheck, tilesInSet will be empty
         List<Tile> tilesInSet = new ArrayList<>();
 
+        List<Tile> remainingTiles = new ArrayList<>(List.copyOf(tilesToCheck));
         for (List<Tile> copies : TILES) {
             boolean copyFound = false;
 
             for (Tile copy : copies) {
-                if (!copyFound) {
-                    for (Tile tileToCheck : tilesToCheck) {
-                        if (copy == tileToCheck) {
-                            copyFound = true;
-                            tilesInSet.add(copy);
-                            break;
-                        }
-                    }
+                if (remainingTiles.contains(copy)) {
+                    copyFound = true;
+                    tilesInSet.add(copy);
+                    remainingTiles.remove(copy);
+                    break;
                 }
             }
 

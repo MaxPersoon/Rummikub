@@ -125,8 +125,7 @@ public class GameState {
 
                 if (set.getTYPE().equals("group")) {
                     tilesToRemove.addAll(setInstance);
-                }
-                else {
+                } else {
                     // run
                     tilesToRemove.add(setInstance.get(0));
                     tilesToRemove.add(setInstance.get(setInstance.size() - 1));
@@ -165,7 +164,7 @@ public class GameState {
 
                         if (set1FirstTile.getCOLOUR().equals(set2FirstTile.getCOLOUR())) {
                             if (set1LastTile.getNUMBER() == set2FirstTile.getNUMBER() - 1 ||
-                                set1FirstTile.getNUMBER() == set2LastTile.getNUMBER() + 1) {
+                                    set1FirstTile.getNUMBER() == set2LastTile.getNUMBER() + 1) {
                                 // Perform move
                                 GameState move = createChild();
 
