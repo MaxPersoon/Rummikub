@@ -36,17 +36,12 @@ public class RandomPlayer implements Player {
             for (GameState move : moves) {
                 List<Tile> playerRack = move.getRACKS().get(this);
                 if (playerRack.size() == 0) {
-                    move.setParent(currentState); // IMPORTANT FOR PROPER TERMINAL OUTPUT
-                    move.printMoveInfo(this);
                     return move;
                 }
             }
 
             int randomIndex = (int) (Math.random() * moves.size());
-            GameState randomMove = moves.get(randomIndex);
-            randomMove.setParent(currentState); // IMPORTANT FOR PROPER TERMINAL OUTPUT
-            randomMove.printMoveInfo(this);
-            return randomMove;
+            return moves.get(randomIndex);
         }
         else {
             System.out.println("Player #" + ID + " is unable to make a move\n");

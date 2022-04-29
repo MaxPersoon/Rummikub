@@ -114,7 +114,7 @@ public class Game extends Thread {
             }
         }
 
-        currentState = new GameState(null, racks, table, pool);
+        currentState = new GameState(racks, table, pool);
         currentState.printRacks();
         currentState.visualize();
     }
@@ -131,14 +131,21 @@ public class Game extends Thread {
                 player.unstuck();
 
                 System.out.println("/ Player #" + player.getID() + " \\");
-                PREVIOUS_STATES.add(currentState);
-                currentState = player.makeMove(currentState);
-                currentState.visualize();
+                GameState newState = player.makeMove(currentState);
+                if (newState != currentState) {
+                    newState.setParent(currentState); // IMPORTANT FOR PROPER TERMINAL OUTPUT
+                    newState.printMoveInfo(player);
+                    newState.visualize();
 
-                if (player.checkWin(currentState)) {
-                    // Player has empty rack --> wins
-                    winners.add(player);
-                    break;
+                    PREVIOUS_STATES.add(currentState);
+                    currentState = newState;
+                    currentState.setDepth(1);
+
+                    if (player.checkWin(currentState)) {
+                        // Player has empty rack --> wins
+                        winners.add(player);
+                        break;
+                    }
                 }
 
                 // Delay between players making moves

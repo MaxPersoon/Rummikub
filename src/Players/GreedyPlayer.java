@@ -38,8 +38,6 @@ public class GreedyPlayer implements Player {
             for (GameState move : moves) {
                 int playerRackSize = move.getRACKS().get(this).size();
                 if (playerRackSize == 0) {
-                    move.setParent(currentState); // IMPORTANT FOR PROPER TERMINAL OUTPUT
-                    move.printMoveInfo(this);
                     return move;
                 }
                 else if (playerRackSize < smallestRackSize) {
@@ -48,8 +46,6 @@ public class GreedyPlayer implements Player {
                 }
             }
 
-            smallestRackState.setParent(currentState); // // IMPORTANT FOR PROPER TERMINAL OUTPUT
-            smallestRackState.printMoveInfo(this);
             return smallestRackState;
         }
         else {

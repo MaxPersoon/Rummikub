@@ -9,16 +9,37 @@ import java.util.List;
 
 public class GameState {
 
+    private String id;
+    private int depth;
     private GameState parent;
     private final LinkedHashMap<Player, List<Tile>> RACKS;
     private final LinkedHashMap<Set, List<List<Tile>>> TABLE;
     private final List<Tile> POOL;
 
+    public GameState(LinkedHashMap<Player, List<Tile>> racks, LinkedHashMap<Set, List<List<Tile>>>  table, List<Tile> pool) {
+        this.depth = 1;
+        this.parent = null;
+        this.RACKS = racks;
+        this.TABLE = table;
+        this.POOL = pool;
+        generateId();
+    }
+
     public GameState(GameState parent, LinkedHashMap<Player, List<Tile>> racks, LinkedHashMap<Set, List<List<Tile>>>  table, List<Tile> pool) {
+        this.id = "";
+        this.depth = parent.depth + 1;
         this.parent = parent;
         this.RACKS = racks;
         this.TABLE = table;
         this.POOL = pool;
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public int getDepth() {
+        return depth;
     }
 
     public GameState getParent() {
@@ -37,41 +58,110 @@ public class GameState {
         return POOL;
     }
 
+    public void generateId() {
+        StringBuilder id = new StringBuilder();
+
+        for (Player player : RACKS.keySet()) {
+            if (!id.isEmpty()) {
+                id.append("-");
+            }
+
+            List<Tile> playerRack = new ArrayList<>(RACKS.get(player));
+            StringBuilder playerRackText = new StringBuilder();
+
+            while (!playerRack.isEmpty()) {
+                if (!playerRackText.isEmpty()) {
+                    playerRackText.append(",");
+                }
+
+                Tile tileWithSmallestId = null;
+                int smallestId = Integer.MAX_VALUE;
+
+                for (Tile tile : playerRack) {
+                    int tileId = tile.getID();
+                    if (tileId < smallestId) {
+                        tileWithSmallestId = tile;
+                        smallestId = tileId;
+                    }
+                }
+
+                playerRack.remove(tileWithSmallestId);
+                playerRackText.append(smallestId);
+            }
+
+            id.append(playerRackText);
+        }
+
+        id.append(":");
+
+        List<Set> sets = new ArrayList<>(List.copyOf(TABLE.keySet().stream().toList()));
+        StringBuilder setsText = new StringBuilder();
+        while (!sets.isEmpty()) {
+            if (!setsText.isEmpty()) {
+                setsText.append("-");
+            }
+
+            Set setWithSmallestId = null;
+            int smallestId = Integer.MAX_VALUE;
+
+            for (Set set : sets) {
+                int setId = set.getID();
+                if (setId < smallestId) {
+                    setWithSmallestId = set;
+                    smallestId = setId;
+                }
+            }
+
+            sets.remove(setWithSmallestId);
+            setsText.append(smallestId).append(",").append(TABLE.get(setWithSmallestId).size());
+        }
+
+        id.append(setsText);
+
+        this.id = id.toString();
+    }
+
     public void setParent(GameState parent) {
         this.parent = parent;
     }
 
-    public List<GameState> getMoves(Player player) {
-        List<GameState> allMoves = new ArrayList<>();
+    public void setDepth(int depth) {
+        this.depth = depth;
+    }
 
-        recursivelyEnumerateMoves(player, allMoves);
+    public List<GameState> getMoves(Player player) {
+        List<GameState> moves = new ArrayList<>();
+        List<GameState> movesAndDummy = new ArrayList<>();
+
+        recursivelyEnumerateMoves(player, moves, movesAndDummy);
 
         // Filter out invalid states
         List<GameState> filteredList = new ArrayList<>();
-        for (GameState move : allMoves) {
+        for (GameState move : moves) {
             if (move.RACKS.get(player).size() < RACKS.get(player).size()) {
                 filteredList.add(move);
             }
         }
-        allMoves = filteredList;
+        moves = filteredList;
 
         // If the player cannot make a move, draw a tile from the pool (if possible)
-        if (allMoves.size() == 0) {
+        if (moves.size() == 0) {
             if (POOL.size() >= 1) {
                 GameState move = createChild();
 
                 Tile tileFromPool = move.POOL.remove(0);
                 move.RACKS.get(player).add(tileFromPool);
+                move.generateId();
                 System.out.println("Draws {" + tileFromPool.getNUMBER() + ", " + tileFromPool.getCOLOUR() + "} from the pool");
 
-                allMoves.add(move);
+                moves.add(move);
             }
         }
 
-        return allMoves;
+        return moves;
     }
 
-    public void recursivelyEnumerateMoves(Player player, List<GameState> allMoves) {
+    private void recursivelyEnumerateMoves(Player player, List<GameState> moves, List<GameState> movesAndDummy) {
         List<Tile> playerRack = this.RACKS.get(player);
 
         // Draw set from rack on table
@@ -85,9 +175,9 @@ public class GameState {
                 move.RACKS.get(player).removeAll(tilesToRemove);
                 move.addSetInstance(set, tilesToRemove);
 
-                if (!move.checkForDuplicates(allMoves)) {
-                    allMoves.add(move);
-                    move.recursivelyEnumerateMoves(player, allMoves);
+                if (move.isWorthExploring(movesAndDummy)) {
+                    moves.add(move);
+                    move.recursivelyEnumerateMoves(player, moves, movesAndDummy);
                 }
             }
         }
@@ -108,9 +198,9 @@ public class GameState {
                     setInstances.put(set, setInstance);
                     move.replaceSetInstances(setInstances, newSetInstance);
 
-                    if (!move.checkForDuplicates(allMoves)) {
-                        allMoves.add(move);
-                        move.recursivelyEnumerateMoves(player, allMoves);
+                    if (move.isWorthExploring(movesAndDummy)) {
+                        moves.add(move);
+                        move.recursivelyEnumerateMoves(player, moves, movesAndDummy);
                     }
                 }
             }
@@ -118,37 +208,37 @@ public class GameState {
 
         // Remove a fourth tile from a group (here) and use it to form a new set (recursively)
         // Remove the first and last tile from a run (here) and use it to form a new set (recursively)
-        for (Set set : TABLE.keySet()) {
-            if (set.getTILES().size() >= 4) {
-                List<Tile> setInstance = TABLE.get(set).get(0);
-                List<Tile> tilesToRemove = new ArrayList<>();
-
-                if (set.getTYPE().equals("group")) {
-                    tilesToRemove.addAll(setInstance);
-                } else {
-                    // run
-                    tilesToRemove.add(setInstance.get(0));
-                    tilesToRemove.add(setInstance.get(setInstance.size() - 1));
-                }
-
-                for (Tile tile : tilesToRemove) {
-                    // Perform move
-                    GameState move = createChild();
-
-                    move.RACKS.get(player).add(tile);
-                    List<Tile> newSetInstance = new ArrayList<>(List.copyOf(setInstance));
-                    newSetInstance.remove(tile);
-                    LinkedHashMap<Set, List<Tile>> setInstances = new LinkedHashMap<>();
-                    setInstances.put(set, setInstance);
-                    move.replaceSetInstances(setInstances, newSetInstance);
-
-                    if (!move.checkForDuplicates(allMoves)) {
-                        allMoves.add(move);
-                        move.recursivelyEnumerateMoves(player, allMoves);
-                    }
-                }
-            }
-        }
+//        for (Set set : TABLE.keySet()) {
+//            if (set.getTILES().size() >= 4) {
+//                List<Tile> setInstance = TABLE.get(set).get(0);
+//                List<Tile> tilesToRemove = new ArrayList<>();
+//
+//                if (set.getTYPE().equals("group")) {
+//                    tilesToRemove.addAll(setInstance);
+//                } else {
+//                    // run
+//                    tilesToRemove.add(setInstance.get(0));
+//                    tilesToRemove.add(setInstance.get(setInstance.size() - 1));
+//                }
+//
+//                for (Tile tile : tilesToRemove) {
+//                    // Perform move
+//                    GameState move = createChild();
+//
+//                    move.RACKS.get(player).add(tile);
+//                    List<Tile> newSetInstance = new ArrayList<>(List.copyOf(setInstance));
+//                    newSetInstance.remove(tile);
+//                    LinkedHashMap<Set, List<Tile>> setInstances = new LinkedHashMap<>();
+//                    setInstances.put(set, setInstance);
+//                    move.replaceSetInstances(setInstances, newSetInstance);
+//
+//                    if (!move.checkForDuplicates(allMoves)) {
+//                        allMoves.add(move);
+//                        move.recursivelyEnumerateMoves(player, allMoves, depth++);
+//                    }
+//                }
+//            }
+//        }
 
         // Merge two runs to make a new set
         for (Set set1 : TABLE.keySet()) {
@@ -176,9 +266,8 @@ public class GameState {
                                 setInstances.put(set2, set2Instance);
                                 move.replaceSetInstances(setInstances, newSetInstance);
 
-                                if (!move.checkForDuplicates(allMoves)) {
-                                    allMoves.add(move);
-                                    move.recursivelyEnumerateMoves(player, allMoves);
+                                if (move.isWorthExploring(movesAndDummy)) {
+                                    move.recursivelyEnumerateMoves(player, moves, movesAndDummy);
                                 }
                             }
                         }
@@ -231,63 +320,36 @@ public class GameState {
         }
     }
 
-    public boolean checkForDuplicates(List<GameState> moves) {
+    private boolean isWorthExploring(List<GameState> movesAndDummy) {
+        generateId();
+
         for (GameState PREVIOUS_STATE : Game.PREVIOUS_STATES) {
-            if (isDuplicate(PREVIOUS_STATE)) {
-                return true;
-            }
-        }
-
-        if (isDuplicate(Game.currentState)) {
-            return true;
-        }
-
-        for (GameState move : moves) {
-            if (isDuplicate(move)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private boolean isDuplicate(GameState stateToCheck) {
-        for (Player player : RACKS.keySet()) {
-            List<Tile> playerRack = RACKS.get(player);
-            List<Tile> playerRackToCheck = stateToCheck.RACKS.get(player);
-            if (playerRack.size() != playerRackToCheck.size()) {
+            if (id.equals(PREVIOUS_STATE.id)) {
+                // Duplicate
                 return false;
             }
-            for (Tile playerTile : playerRack) {
-                boolean matchFound = false;
-
-                for (Tile playerTileToCheck : playerRackToCheck) {
-                    if (playerTile.isMatch(playerTileToCheck)) {
-                        matchFound = true;
-                        break;
-                    }
-                }
-
-                if (!matchFound) {
-                    return false;
-                }
-            }
         }
 
-        List<Set> sets = TABLE.keySet().stream().toList();
-        List<Set> setsToCheck = stateToCheck.TABLE.keySet().stream().toList();
-        if (sets.size() != setsToCheck.size()) {
+        if (id.equals(Game.currentState.id)) {
+            // Duplicate
             return false;
         }
-        for (Set set : sets) {
-            if (!setsToCheck.contains(set)) {
-                return false;
-            }
-            if (TABLE.get(set).size() != stateToCheck.TABLE.get(set).size()) {
-                return false;
+
+        for (GameState state : movesAndDummy) {
+            if (id.equals(state.id)) {
+                // Duplicate
+                if (depth >= state.depth) {
+                    return false;
+                }
+                else {
+                    // Duplicate at lower depth
+                    movesAndDummy.remove(state);
+                    break;
+                }
             }
         }
 
+        movesAndDummy.add(this);
         return true;
     }
 
@@ -304,7 +366,7 @@ public class GameState {
             if (!text.isEmpty()) {
                 text.append(" | ");
             }
-            text.append(tile.getNUMBER() + ", " + tile.getCOLOUR());
+            text.append(tile.getNUMBER()).append(", ").append(tile.getCOLOUR());
         }
         System.out.println(text);
     }
@@ -318,7 +380,7 @@ public class GameState {
                     if (!text.isEmpty()) {
                         text.append(" | ");
                     }
-                    text.append(tile.getNUMBER() + ", " + tile.getCOLOUR());
+                    text.append(tile.getNUMBER()).append(", ").append(tile.getCOLOUR());
                 }
                 System.out.println("* Set #" + set.getID() + ": " + text);
             }
