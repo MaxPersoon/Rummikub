@@ -377,7 +377,7 @@ public class GameState {
         }
     }
 
-    private List<Tile> fetchTilesOnTable() {
+    public List<Tile> fetchTilesOnTable() {
         List<Tile> tilesOnTable = new ArrayList<>();
 
         for (Set set : TABLE.keySet()) {

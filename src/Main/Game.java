@@ -1,6 +1,7 @@
 package Main;
 
 import Players.GreedyPlayer;
+import Players.IntegerLinearProgramming;
 import Players.Player;
 import Players.RandomPlayer;
 import javafx.scene.Node;
@@ -23,16 +24,6 @@ public class Game extends Thread {
     }
 
     private static void initialize() {
-        // Create players
-        for (String playerType : Main.PLAYER_TYPES) {
-            if (playerType.equals("random")) {
-                PLAYERS.add(new RandomPlayer(PLAYERS.size() + 1));
-            }
-            else if (playerType.equals("greedy")) {
-                PLAYERS.add(new GreedyPlayer(PLAYERS.size() + 1));
-            }
-        }
-
         // Create tiles
         HashMap<String, List<Tile>> tilesWithColour = new HashMap<>();
         HashMap<Integer, List<Tile>> tilesWithNumber = new HashMap<>();
@@ -95,6 +86,15 @@ public class Game extends Thread {
 //        for (Set set : SETS) {
 //            set.print();
 //        }
+
+        // Create players
+        for (String playerType : Main.PLAYER_TYPES) {
+            switch (playerType) {
+                case "random" -> PLAYERS.add(new RandomPlayer(PLAYERS.size() + 1));
+                case "greedy" -> PLAYERS.add(new GreedyPlayer(PLAYERS.size() + 1));
+                case "ilp" -> PLAYERS.add(new IntegerLinearProgramming(PLAYERS.size() + 1));
+            }
+        }
 
         // Create initial GameState
         LinkedHashMap<Player, List<Tile>> racks = new LinkedHashMap<>();
