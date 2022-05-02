@@ -9,6 +9,9 @@ import java.util.List;
 
 public class GameState {
 
+    private static long startTime = 0;
+    private static final int maximumTime = 500;
+
     private String id;
     private int depth;
     private GameState parent;
@@ -133,13 +136,34 @@ public class GameState {
         List<GameState> moves = new ArrayList<>();
         List<GameState> movesAndDummy = new ArrayList<>();
 
+        startTime = System.currentTimeMillis();
         recursivelyEnumerateMoves(player, moves, movesAndDummy);
 
         // Filter out invalid states
         List<GameState> filteredList = new ArrayList<>();
+        List<Tile> tilesOnCurrentTable = fetchTilesOnTable();
         for (GameState move : moves) {
-            if (move.RACKS.get(player).size() < RACKS.get(player).size()) {
-                filteredList.add(move);
+            boolean valid = true;
+
+            // Ensure that at least one tile is drawn from the player's rack
+            if (move.RACKS.get(player).size() >= RACKS.get(player).size()) {
+                valid = false;
+            }
+
+            if (valid) {
+                // Ensure that no tile which is currently on the table has entered the player's rack
+                List<Tile> tilesOnPotentialTable = move.fetchTilesOnTable();
+
+                for (Tile tile : tilesOnCurrentTable) {
+                    if (!tilesOnPotentialTable.contains(tile)) {
+                        valid = false;
+                        break;
+                    }
+                }
+
+                if (valid) {
+                    filteredList.add(move);
+                }
             }
         }
         moves = filteredList;
@@ -162,119 +186,207 @@ public class GameState {
     }
 
     private void recursivelyEnumerateMoves(Player player, List<GameState> moves, List<GameState> movesAndDummy) {
-        List<Tile> playerRack = this.RACKS.get(player);
+        if (depth < 50 && (System.currentTimeMillis() - startTime) < maximumTime) {
+            List<Tile> playerRack = this.RACKS.get(player);
 
-        // Draw set from rack on table
-        for (Set set : Game.SETS) {
-            List<Tile> tilesToRemove = set.drawableFromRack(playerRack);
+            // Draw set from rack on table
+            for (Set set : Game.SETS) {
+                List<Tile> tilesToRemove = set.drawableFromRack(playerRack);
 
-            if (tilesToRemove.size() >= 3) {
-                // Perform move
-                GameState move = createChild();
-
-                move.RACKS.get(player).removeAll(tilesToRemove);
-                move.addSetInstance(set, tilesToRemove);
-
-                if (move.isWorthExploring(movesAndDummy)) {
-                    moves.add(move);
-                    move.recursivelyEnumerateMoves(player, moves, movesAndDummy);
-                }
-            }
-        }
-
-        // Add one tile from rack to existing group
-        // Add one tile from rack to front or back of existing run
-        for (Tile playerTile : playerRack) {
-            for (Set set : TABLE.keySet()) {
-                if (set.isExpandingTile(playerTile)) {
+                if (tilesToRemove.size() >= 3) {
                     // Perform move
                     GameState move = createChild();
 
-                    move.RACKS.get(player).remove(playerTile);
-                    List<Tile> setInstance = TABLE.get(set).get(0);
-                    List<Tile> newSetInstance = new ArrayList<>(List.copyOf(setInstance));
-                    newSetInstance.add(playerTile);
-                    LinkedHashMap<Set, List<Tile>> setInstances = new LinkedHashMap<>();
-                    setInstances.put(set, setInstance);
-                    move.replaceSetInstances(setInstances, newSetInstance);
+                    move.RACKS.get(player).removeAll(tilesToRemove);
+                    move.addSetInstance(set, tilesToRemove);
 
                     if (move.isWorthExploring(movesAndDummy)) {
                         moves.add(move);
                         move.recursivelyEnumerateMoves(player, moves, movesAndDummy);
                     }
                 }
+
+                // Time limit check
+                if (System.currentTimeMillis() - startTime >= maximumTime) {
+                    return;
+                }
             }
-        }
 
-        // Remove a fourth tile from a group (here) and use it to form a new set (recursively)
-        // Remove the first and last tile from a run (here) and use it to form a new set (recursively)
-//        for (Set set : TABLE.keySet()) {
-//            if (set.getTILES().size() >= 4) {
-//                List<Tile> setInstance = TABLE.get(set).get(0);
-//                List<Tile> tilesToRemove = new ArrayList<>();
-//
-//                if (set.getTYPE().equals("group")) {
-//                    tilesToRemove.addAll(setInstance);
-//                } else {
-//                    // run
-//                    tilesToRemove.add(setInstance.get(0));
-//                    tilesToRemove.add(setInstance.get(setInstance.size() - 1));
-//                }
-//
-//                for (Tile tile : tilesToRemove) {
-//                    // Perform move
-//                    GameState move = createChild();
-//
-//                    move.RACKS.get(player).add(tile);
-//                    List<Tile> newSetInstance = new ArrayList<>(List.copyOf(setInstance));
-//                    newSetInstance.remove(tile);
-//                    LinkedHashMap<Set, List<Tile>> setInstances = new LinkedHashMap<>();
-//                    setInstances.put(set, setInstance);
-//                    move.replaceSetInstances(setInstances, newSetInstance);
-//
-//                    if (!move.checkForDuplicates(allMoves)) {
-//                        allMoves.add(move);
-//                        move.recursivelyEnumerateMoves(player, allMoves, depth++);
-//                    }
-//                }
-//            }
-//        }
+            // Merge two runs to make a new run
+            for (Set set1 : TABLE.keySet()) {
+                if (set1.getTYPE().equals("run")) {
+                    for (Set set2 : TABLE.keySet()) {
+                        if (set2.getTYPE().equals("run") && set1 != set2) {
+                            List<Tile> set1Instance = TABLE.get(set1).get(0);
+                            Tile set1FirstTile = set1Instance.get(0);
+                            Tile set1LastTile = set1Instance.get(set1Instance.size() - 1);
+                            List<Tile> set2Instance = TABLE.get(set2).get(0);
+                            Tile set2FirstTile = set2Instance.get(0);
+                            Tile set2LastTile = set2Instance.get(set2Instance.size() - 1);
 
-        // Merge two runs to make a new set
-        for (Set set1 : TABLE.keySet()) {
-            if (set1.getTYPE().equals("run")) {
-                for (Set set2 : TABLE.keySet()) {
-                    if (set2.getTYPE().equals("run") && set1 != set2) {
-                        List<Tile> set1Instance = TABLE.get(set1).get(0);
-                        Tile set1FirstTile = set1Instance.get(0);
-                        Tile set1LastTile = set1Instance.get(set1Instance.size() - 1);
-                        List<Tile> set2Instance = TABLE.get(set2).get(0);
-                        Tile set2FirstTile = set2Instance.get(0);
-                        Tile set2LastTile = set2Instance.get(set2Instance.size() - 1);
+                            if (set1FirstTile.getCOLOUR().equals(set2FirstTile.getCOLOUR())) {
+                                if (set1LastTile.getNUMBER() == set2FirstTile.getNUMBER() - 1 ||
+                                        set1FirstTile.getNUMBER() == set2LastTile.getNUMBER() + 1) {
+                                    // Perform move
+                                    GameState dummy = createChild();
 
-                        if (set1FirstTile.getCOLOUR().equals(set2FirstTile.getCOLOUR())) {
-                            if (set1LastTile.getNUMBER() == set2FirstTile.getNUMBER() - 1 ||
-                                    set1FirstTile.getNUMBER() == set2LastTile.getNUMBER() + 1) {
-                                // Perform move
-                                GameState move = createChild();
+                                    List<Tile> newSetInstance = new ArrayList<>();
+                                    newSetInstance.addAll(set1Instance);
+                                    newSetInstance.addAll(set2Instance);
+                                    LinkedHashMap<Set, List<Tile>> setInstances = new LinkedHashMap<>();
+                                    setInstances.put(set1, set1Instance);
+                                    setInstances.put(set2, set2Instance);
+                                    List<List<Tile>> newSetInstances = new ArrayList<>();
+                                    newSetInstances.add(newSetInstance);
+                                    dummy.replaceSetInstances(setInstances, newSetInstances);
 
-                                List<Tile> newSetInstance = new ArrayList<>();
-                                newSetInstance.addAll(set1Instance);
-                                newSetInstance.addAll(set2Instance);
-                                LinkedHashMap<Set, List<Tile>> setInstances = new LinkedHashMap<>();
-                                setInstances.put(set1, set1Instance);
-                                setInstances.put(set2, set2Instance);
-                                move.replaceSetInstances(setInstances, newSetInstance);
-
-                                if (move.isWorthExploring(movesAndDummy)) {
-                                    move.recursivelyEnumerateMoves(player, moves, movesAndDummy);
+                                    if (dummy.isWorthExploring(movesAndDummy)) {
+                                        dummy.recursivelyEnumerateMoves(player, moves, movesAndDummy);
+                                    }
                                 }
                             }
                         }
+
+                        // Time limit check
+                        if (System.currentTimeMillis() - startTime >= maximumTime) {
+                            return;
+                        }
                     }
+                }
+
+                // Time limit check
+                if (System.currentTimeMillis() - startTime >= maximumTime) {
+                    return;
+                }
+            }
+
+            // Split a run into two new runs
+            for (Set set : TABLE.keySet()) {
+                if (set.getTYPE().equals("run") && set.getTILES().size() >= 6) {
+                    // Perform move
+                    GameState dummy = createChild();
+
+                    List<Tile> setInstance = TABLE.get(set).get(0);
+                    List<Tile> newSetInstance1 = new ArrayList<>();
+                    List<Tile> newSetInstance2 = new ArrayList<>();
+                    for (int i = 0; i < setInstance.size(); i++) {
+                        if (i < 3) {
+                            newSetInstance1.add(setInstance.get(i));
+                        } else {
+                            newSetInstance2.add(setInstance.get(i));
+                        }
+                    }
+                    LinkedHashMap<Set, List<Tile>> setInstances = new LinkedHashMap<>();
+                    setInstances.put(set, setInstance);
+                    List<List<Tile>> newSetInstances = new ArrayList<>();
+                    newSetInstances.add(newSetInstance1);
+                    newSetInstances.add(newSetInstance2);
+                    dummy.replaceSetInstances(setInstances, newSetInstances);
+
+                    if (dummy.isWorthExploring(movesAndDummy)) {
+                        dummy.recursivelyEnumerateMoves(player, moves, movesAndDummy);
+                    }
+                }
+
+                // Time limit check
+                if (System.currentTimeMillis() - startTime >= maximumTime) {
+                    return;
+                }
+            }
+
+            // Add one tile from rack to existing group
+            // Add one tile from rack to front or back of existing run
+            for (Tile playerTile : playerRack) {
+                for (Set set : TABLE.keySet()) {
+                    if (set.isExpandingTile(playerTile)) {
+                        // Perform move
+                        GameState move = createChild();
+
+                        move.RACKS.get(player).remove(playerTile);
+                        List<Tile> setInstance = TABLE.get(set).get(0);
+                        List<Tile> newSetInstance = new ArrayList<>(List.copyOf(setInstance));
+                        newSetInstance.add(playerTile);
+                        LinkedHashMap<Set, List<Tile>> setInstances = new LinkedHashMap<>();
+                        setInstances.put(set, setInstance);
+                        List<List<Tile>> newSetInstances = new ArrayList<>();
+                        newSetInstances.add(newSetInstance);
+                        move.replaceSetInstances(setInstances, newSetInstances);
+
+                        if (move.isWorthExploring(movesAndDummy)) {
+                            moves.add(move);
+                            move.recursivelyEnumerateMoves(player, moves, movesAndDummy);
+                        }
+                    }
+
+                    // Time limit check
+                    if (System.currentTimeMillis() - startTime >= maximumTime) {
+                        return;
+                    }
+                }
+
+                // Time limit check
+                if (System.currentTimeMillis() - startTime >= maximumTime) {
+                    return;
+                }
+            }
+
+            // Remove a fourth tile from a group
+            // Remove the first and last tile from a run
+            for (Set set : TABLE.keySet()) {
+                if (set.getTILES().size() >= 4) {
+                    List<Tile> setInstance = TABLE.get(set).get(0);
+                    List<Tile> tilesToRemove = new ArrayList<>();
+
+                    if (set.getTYPE().equals("group")) {
+                        tilesToRemove.addAll(setInstance);
+                    } else {
+                        // run
+                        tilesToRemove.add(setInstance.get(0));
+                        tilesToRemove.add(setInstance.get(setInstance.size() - 1));
+                    }
+
+                    for (Tile tile : tilesToRemove) {
+                        // Perform move
+                        GameState dummy = createChild();
+
+                        dummy.RACKS.get(player).add(tile);
+                        List<Tile> newSetInstance = new ArrayList<>(List.copyOf(setInstance));
+                        newSetInstance.remove(tile);
+                        LinkedHashMap<Set, List<Tile>> setInstances = new LinkedHashMap<>();
+                        setInstances.put(set, setInstance);
+                        List<List<Tile>> newSetInstances = new ArrayList<>();
+                        newSetInstances.add(newSetInstance);
+                        dummy.replaceSetInstances(setInstances, newSetInstances);
+
+                        if (dummy.isWorthExploring(movesAndDummy)) {
+                            dummy.recursivelyEnumerateMoves(player, moves, movesAndDummy);
+                        }
+
+                        // Time limit check
+                        if (System.currentTimeMillis() - startTime >= maximumTime) {
+                            return;
+                        }
+                    }
+                }
+
+                // Time limit check
+                if (System.currentTimeMillis() - startTime >= maximumTime) {
+                    return;
                 }
             }
         }
+    }
+
+    private List<Tile> fetchTilesOnTable() {
+        List<Tile> tilesOnTable = new ArrayList<>();
+
+        for (Set set : TABLE.keySet()) {
+            for (List<Tile> setInstance : TABLE.get(set)) {
+                tilesOnTable.addAll(setInstance);
+            }
+        }
+
+        return tilesOnTable;
     }
 
     private GameState createChild() {
@@ -306,15 +418,22 @@ public class GameState {
         }
     }
 
-    private void replaceSetInstances(LinkedHashMap<Set, List<Tile>> setInstances, List<Tile> newSetInstance) {
+    private void replaceSetInstances(LinkedHashMap<Set, List<Tile>> setInstances, List<List<Tile>> newSetInstances) {
         for (Set set : setInstances.keySet()) {
             removeSetInstance(set, setInstances.get(set));
         }
 
         for (Set set_ : Game.SETS) {
-            List<Tile> tilesInSet = set_.isExactMatch(newSetInstance);
-            if (tilesInSet.size() > 0) {
-                addSetInstance(set_, tilesInSet);
+            for (List<Tile> newSetInstance : newSetInstances) {
+                List<Tile> tilesInSet = set_.isExactMatch(newSetInstance);
+                if (tilesInSet.size() > 0) {
+                    addSetInstance(set_, tilesInSet);
+                    newSetInstances.remove(newSetInstance);
+                    break;
+                }
+            }
+
+            if (newSetInstances.size() == 0) {
                 break;
             }
         }
@@ -438,8 +557,6 @@ public class GameState {
 
         System.out.println("Rack:");
         printRack(player);
-
-        System.out.println();
     }
 
     public void visualize() {

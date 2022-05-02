@@ -131,10 +131,13 @@ public class Game extends Thread {
                 player.unstuck();
 
                 System.out.println("/ Player #" + player.getID() + " \\");
+                long startTime = System.currentTimeMillis();
                 GameState newState = player.makeMove(currentState);
+                long endTime = System.currentTimeMillis();
                 if (newState != currentState) {
                     newState.setParent(currentState); // IMPORTANT FOR PROPER TERMINAL OUTPUT
                     newState.printMoveInfo(player);
+                    System.out.println("Time needed (ms): " + (endTime - startTime) + "\n");
                     newState.visualize();
 
                     PREVIOUS_STATES.add(currentState);

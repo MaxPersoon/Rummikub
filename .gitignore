@@ -67,3 +67,6 @@ out/production/Rummikub/Main/GameState.class
 out/production/Rummikub/Players/Player.class
 out/production/Rummikub/Players/RandomPlayer.class
 out/production/Rummikub/Players/GreedyPlayer.class
+.idea/libraries/jna.xml
+.idea/libraries/OR_Tools.xml
+out/production/Rummikub/Players/IntegerLinearProgramming.class
