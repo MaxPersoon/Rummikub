@@ -70,3 +70,4 @@ out/production/Rummikub/Players/GreedyPlayer.class
 .idea/libraries/jna.xml
 .idea/libraries/OR_Tools.xml
 out/production/Rummikub/Players/IntegerLinearProgramming.class
+.idea/inspectionProfiles/Project_Default.xml

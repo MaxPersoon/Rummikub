@@ -16,6 +16,7 @@ public class IntegerLinearProgramming implements Player {
     private static final HashMap<Integer, List<Tile>> tileTypes = new HashMap<>(); // Maps index i to type of tile
     private static final HashMap<Integer, Set> sets = new HashMap<>(); // Maps index j to set
     private static boolean nativeLibrariesLoaded = false;
+    private static final boolean debug = false;
 
     private final int ID;
     private boolean stuck;
@@ -58,32 +59,14 @@ public class IntegerLinearProgramming implements Player {
     public GameState makeMove(GameState currentState) {
         // Create the linear solver with the SCIP backend.
         MPSolver solver = MPSolver.createSolver("SCIP");
-        List<MPVariable> sValues = new ArrayList<>();
-        List<MPVariable> tValues = new ArrayList<>();
-        List<MPVariable> rValues = new ArrayList<>();
+        List<Integer> sValues = new ArrayList<>();
+        List<Integer> tValues = new ArrayList<>();
+        List<Integer> rValues = new ArrayList<>();
         List<MPVariable> xValues = new ArrayList<>();
         List<MPVariable> yValues = new ArrayList<>();
 
-        // s_ij (p): indicates whether tile i is in set j (yes = 1, no = 0)
         // x_j (v): set j can be placed 0, 1 or 2 times onto the table
         for (Integer j : sets.keySet()) {
-            Set set = sets.get(j);
-
-            for (Integer i : tileTypes.keySet()) {
-                Tile tileType = tileTypes.get(i).get(0);
-
-                MPVariable s_ij;
-                String name = "s_" + i.toString() + j.toString();
-                if (tileType.getSETS().contains(set)) {
-                    s_ij = solver.makeIntVar(1, 1, name);
-                }
-                else {
-                    s_ij = solver.makeIntVar(0, 0, name);
-                }
-
-                sValues.add(s_ij);
-            }
-
             MPVariable x_j = solver.makeIntVar(0, 2, "x_" + j);
             xValues.add(x_j);
         }
@@ -91,26 +74,42 @@ public class IntegerLinearProgramming implements Player {
         // t_i (p): tile i is 0, 1 or 2 times on the table
         // r_i (p): tile i is 0, 1 or 2 times on the player's rack
         // y_i (v): tile i can be placed 0, 1 or 2 times from the player's rack onto the table
+        // s_ij (p): indicates whether tile i is in set j (yes = 1, no = 0)
         List<Tile> tilesOnTable = currentState.fetchTilesOnTable();
         List<Tile> tilesOnRack = new ArrayList<>(List.copyOf(currentState.getRACKS().get(this)));
         for (Integer i : tileTypes.keySet()) {
-            int timesOnTable = 0;
-            int timesOnRack = 0;
+            List<Tile> copies = tileTypes.get(i);
+            int t_i = 0;
+            int r_i = 0;
 
-            for (Tile tile : tileTypes.get(i)) {
-                if (tilesOnTable.contains(tile)) {
-                    timesOnTable++;
-                    tilesOnTable.remove(tile);
+            for (Tile copy : copies) {
+                if (tilesOnTable.contains(copy)) {
+                    t_i++;
+                    tilesOnTable.remove(copy);
                 }
-                if (tilesOnRack.contains(tile)) {
-                    timesOnRack++;
-                    tilesOnRack.remove(tile);
+                else if (tilesOnRack.contains(copy)) {
+                    r_i++;
+                    tilesOnRack.remove(copy);
                 }
             }
 
-            MPVariable t_i = solver.makeIntVar(timesOnTable, timesOnTable, "t_" + i);
-            MPVariable r_i = solver.makeIntVar(timesOnRack, timesOnRack, "r_" + i);
             MPVariable y_i = solver.makeIntVar(0, 2, "y_" + i);
+            MPConstraint constraint1 = solver.makeConstraint(Double.NEGATIVE_INFINITY, r_i, "constraint y_" + i);
+            constraint1.setCoefficient(y_i, 1);
+
+            MPConstraint constraint2 = solver.makeConstraint(t_i, t_i, "constraint sum_" + i);
+            for (Integer j : sets.keySet()) {
+                Set set = sets.get(j);
+                int s_ij = 0;
+
+                if (copies.get(0).getSETS().contains(set)) {
+                    s_ij = 1;
+                    constraint2.setCoefficient(xValues.get(j - 1), 1);
+                }
+
+                sValues.add(s_ij);
+            }
+            constraint2.setCoefficient(y_i, -1);
 
             tValues.add(t_i);
             rValues.add(r_i);
@@ -124,7 +123,117 @@ public class IntegerLinearProgramming implements Player {
         }
         objective.setMaximization();
 
-        return null;
+        // Debugging
+        if (debug) {
+            System.out.println("<<< DEBUG START >>>");
+            System.out.println("Number of tile types = " + tileTypes.size());
+            System.out.println("Number of sets = " + sets.size());
+            System.out.println("Number of s_ij parameters = " + sValues.size());
+            System.out.println("Number of t_i parameters = " + tValues.size());
+            System.out.println("Number of r_i parameters = " + rValues.size());
+            System.out.println("Number of x_j variables = " + xValues.size());
+            System.out.println("Number of y_i variables = " + yValues.size() + "\n");
+        }
+
+        // Solve
+        solver.solve();
+        if (debug) {
+            System.out.println("Solution:");
+            System.out.println("- Objective value = " + objective.value() + "\n");
+        }
+
+        // Convert to GameState
+        GameState newState = currentState.createChild();
+        tilesOnRack = newState.getRACKS().get(this);
+        List<Tile> drawnTiles = new ArrayList<>();
+        for (Integer i : tileTypes.keySet()) {
+            List<Tile> copies = tileTypes.get(i);
+            int y_i = (int) yValues.get(i - 1).solutionValue();
+
+            for (int a = 0; a < y_i; a++) {
+                for (Tile copy : copies) {
+                    if (tilesOnRack.contains(copy)) {
+                        tilesOnRack.remove(copy);
+                        drawnTiles.add(copy);
+                        break;
+                    }
+                }
+
+                if (debug) {
+                    System.out.print("- Draws ");
+                    tileTypes.get(i).get(0).print();
+                }
+            }
+        }
+
+        if (debug) {
+            System.out.println();
+        }
+
+        if (!drawnTiles.isEmpty()) {
+            List<Set> drawnSets = new ArrayList<>();
+            for (Integer j : sets.keySet()) {
+                Set set = sets.get(j);
+                int x_j = (int) xValues.get(j - 1).solutionValue();
+
+                int differenceInNumber = x_j;
+                if (currentState.getTABLE().containsKey(set)) {
+                    differenceInNumber -= currentState.getTABLE().get(set).size();
+                }
+
+                if (differenceInNumber >= 1) {
+                    for (int a = 0; a < differenceInNumber; a++) {
+                        drawnSets.add(set);
+
+                        if (debug) {
+                            System.out.print("- Draws ");
+                            set.print();
+                        }
+                    }
+                } else if (differenceInNumber <= -1) {
+                    differenceInNumber = differenceInNumber * -1;
+                    for (int a = 0; a < differenceInNumber; a++) {
+                        List<Tile> setInstance = newState.getTABLE().get(set).get(0);
+                        drawnTiles.addAll(setInstance);
+                        newState.removeSetInstance(set, setInstance);
+
+                        if (debug) {
+                            System.out.print("- Removed ");
+                            set.print();
+                        }
+                    }
+                }
+            }
+
+            if (debug) {
+                System.out.println("<<< DEBUG END >>>");
+            }
+
+            // Process changes in new GameState
+            for (Set set : drawnSets) {
+                List<Tile> setInstance = set.drawableFromRack(drawnTiles);
+                drawnTiles.removeAll(setInstance);
+                newState.addSetInstance(set, setInstance);
+            }
+
+            return newState;
+        }
+        else {
+            if (debug) {
+                System.out.println("<<< DEBUG END >>>");
+            }
+
+            // Draw a tile from the pool (if possible)
+            if (currentState.getPOOL().size() >= 1) {
+                newState.drawTileFromPool(this);
+                return newState;
+            }
+            else {
+                System.out.println("Player #" + ID + " is unable to make a move\n");
+                this.stuck = true;
+                return currentState;
+            }
+        }
     }
 
     public boolean checkWin(GameState currentState) {
