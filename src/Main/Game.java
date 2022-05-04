@@ -145,7 +145,7 @@ public class Game extends Thread {
                 if (newState != currentState) {
                     newState.setParent(currentState); // IMPORTANT FOR PROPER TERMINAL OUTPUT
                     newState.printMoveInfo(player);
-                    int score = newState.getScore();
+                    double score = newState.getScore();
                     if (score > 0) {
                         System.out.println("Move score: " + score);
                     }

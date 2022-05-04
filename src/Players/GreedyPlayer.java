@@ -43,10 +43,10 @@ public class GreedyPlayer implements Player {
             // Returns the state with the highest score
             // Winning states are given priority
             GameState highestScoreState = null;
-            int highestScore = Integer.MIN_VALUE;
+            double highestScore = Double.NEGATIVE_INFINITY;
 
             for (GameState move : moves) {
-                int score = move.getScore();
+                double score = move.getScore();
 
                 if (checkWin(move)) {
                     return move;

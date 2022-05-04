@@ -241,7 +241,7 @@ public class IntegerLinearProgramming implements Player {
                 newState.addSetInstance(set, setInstance);
             }
 
-            newState.calculateScore(currentState, this);
+            newState.setScore(objective.value());
             return newState;
         }
         else {

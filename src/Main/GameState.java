@@ -14,7 +14,7 @@ public class GameState {
 
     private String id;
     private int depth;
-    private int score; // determined by objective function
+    private double score; // determined by objective function
     private GameState parent;
     private final LinkedHashMap<Player, List<Tile>> RACKS;
     private final LinkedHashMap<Set, List<List<Tile>>> TABLE;
@@ -48,7 +48,7 @@ public class GameState {
         return depth;
     }
 
-    public int getScore() {
+    public double getScore() {
         return score;
     }
 
@@ -137,6 +137,10 @@ public class GameState {
 
     public void setDepth(int depth) {
         this.depth = depth;
+    }
+
+    public void setScore(double score) {
+        this.score = score;
     }
 
     public void calculateScore(GameState currentState, Player player) {
