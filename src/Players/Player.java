@@ -4,7 +4,11 @@ import Main.GameState;
 
 public interface Player {
 
+    String getName();
+
     int getID();
+
+    String getObjectiveFunction();
 
     boolean isStuck();
 

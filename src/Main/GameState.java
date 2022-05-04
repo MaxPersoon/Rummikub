@@ -14,6 +14,7 @@ public class GameState {
 
     private String id;
     private int depth;
+    private int score; // determined by objective function
     private GameState parent;
     private final LinkedHashMap<Player, List<Tile>> RACKS;
     private final LinkedHashMap<Set, List<List<Tile>>> TABLE;
@@ -21,6 +22,7 @@ public class GameState {
 
     public GameState(LinkedHashMap<Player, List<Tile>> racks, LinkedHashMap<Set, List<List<Tile>>>  table, List<Tile> pool) {
         this.depth = 1;
+        this.score = 0;
         this.parent = null;
         this.RACKS = racks;
         this.TABLE = table;
@@ -31,6 +33,7 @@ public class GameState {
     public GameState(GameState parent, LinkedHashMap<Player, List<Tile>> racks, LinkedHashMap<Set, List<List<Tile>>>  table, List<Tile> pool) {
         this.id = "";
         this.depth = parent.depth + 1;
+        this.score = 0;
         this.parent = parent;
         this.RACKS = racks;
         this.TABLE = table;
@@ -43,6 +46,10 @@ public class GameState {
 
     public int getDepth() {
         return depth;
+    }
+
+    public int getScore() {
+        return score;
     }
 
     public GameState getParent() {
@@ -132,6 +139,29 @@ public class GameState {
         this.depth = depth;
     }
 
+    public void calculateScore(GameState currentState, Player player) {
+        String objectiveFunction = player.getObjectiveFunction();
+        List<Tile> currentPlayerRack = currentState.getRACKS().get(player);
+        List<Tile> potentialPlayerRack = RACKS.get(player);
+
+        if (objectiveFunction.equals("ttc")) {
+            // total tile count
+            score = Math.max(0, currentPlayerRack.size() - potentialPlayerRack.size());
+        }
+        else if (objectiveFunction.equals("ttv")) {
+            // total tile value
+            for (Tile tile : currentPlayerRack) {
+                if (!potentialPlayerRack.contains(tile)) {
+                    score += tile.getNUMBER();
+                }
+            }
+        }
+        else {
+            System.out.println("Error: invalid objective function \"" + objectiveFunction + "\"");
+            System.exit(0);
+        }
+    }
+
     public List<GameState> getMoves(Player player) {
         List<GameState> moves = new ArrayList<>();
         List<GameState> movesAndDummy = new ArrayList<>();
@@ -143,12 +173,8 @@ public class GameState {
         List<GameState> filteredList = new ArrayList<>();
         List<Tile> tilesOnCurrentTable = fetchTilesOnTable();
         for (GameState move : moves) {
-            boolean valid = true;
-
             // Ensure that at least one tile is drawn from the player's rack
-            if (move.RACKS.get(player).size() >= RACKS.get(player).size()) {
-                valid = false;
-            }
+            boolean valid = move.RACKS.get(player).size() < RACKS.get(player).size();
 
             if (valid) {
                 // Ensure that no tile which is currently on the table has entered the player's rack
@@ -167,6 +193,11 @@ public class GameState {
             }
         }
         moves = filteredList;
+
+        // Calculate scores
+        for (GameState move : moves) {
+            move.calculateScore(this, player);
+        }
 
         // If the player cannot make a move, draw a tile from the pool (if possible)
         if (moves.size() == 0) {

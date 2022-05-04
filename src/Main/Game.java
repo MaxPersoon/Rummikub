@@ -88,11 +88,19 @@ public class Game extends Thread {
 //        }
 
         // Create players
-        for (String playerType : Main.PLAYER_TYPES) {
+        for (int i = 0; i < Main.PLAYER_TYPES.length; i++) {
+            int id = PLAYERS.size() + 1;
+            String playerType = Main.PLAYER_TYPES[i];
+            String objectiveFunction = Main.OBJECTIVE_FUNCTIONS[i];
+
             switch (playerType) {
-                case "random" -> PLAYERS.add(new RandomPlayer(PLAYERS.size() + 1));
-                case "greedy" -> PLAYERS.add(new GreedyPlayer(PLAYERS.size() + 1));
-                case "ilp" -> PLAYERS.add(new IntegerLinearProgramming(PLAYERS.size() + 1));
+                case "random" -> PLAYERS.add(new RandomPlayer(id, objectiveFunction));
+                case "greedy" -> PLAYERS.add(new GreedyPlayer(id, objectiveFunction));
+                case "ilp" -> PLAYERS.add(new IntegerLinearProgramming(id, objectiveFunction));
+                default -> {
+                    System.out.println("Error: invalid player type \"" + playerType + "\"");
+                    System.exit(0);
+                }
             }
         }
 
@@ -130,13 +138,17 @@ public class Game extends Thread {
             for (Player player : PLAYERS) {
                 player.unstuck();
 
-                System.out.println("/ Player #" + player.getID() + " \\");
+                System.out.println("/ Player #" + player.getID() + " (" + player.getName() + " w/ " + player.getObjectiveFunction() + ") \\");
                 long startTime = System.currentTimeMillis();
                 GameState newState = player.makeMove(currentState);
                 long endTime = System.currentTimeMillis();
                 if (newState != currentState) {
                     newState.setParent(currentState); // IMPORTANT FOR PROPER TERMINAL OUTPUT
                     newState.printMoveInfo(player);
+                    int score = newState.getScore();
+                    if (score > 0) {
+                        System.out.println("Move score: " + score);
+                    }
                     System.out.println("Time needed (ms): " + (endTime - startTime) + "\n");
                     newState.visualize();
 
@@ -188,12 +200,13 @@ public class Game extends Thread {
         }
 
         if (winners.size() == 1) {
-            System.out.println("Player #" + winners.get(0).getID() + " wins");
+            Player winner = winners.get(0);
+            System.out.println("Player #" + winner.getID() + " (" + winner.getName() + " w/ " + winner.getObjectiveFunction() + ") wins!");
         }
         else {
             System.out.println("It's a tie!\nWinners:");
             for (Player winner : winners) {
-                System.out.println("- Player #" + winner.getID());
+                System.out.println("- Player #" + winner.getID() + " (" + winner.getName() + " w/ " + winner.getObjectiveFunction() + ")");
             }
         }
     }

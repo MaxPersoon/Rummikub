@@ -8,21 +8,23 @@ import com.google.ortools.Loader;
 import com.google.ortools.linearsolver.*;
 
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 public class IntegerLinearProgramming implements Player {
 
-    private static final HashMap<Integer, List<Tile>> tileTypes = new HashMap<>(); // Maps index i to type of tile
-    private static final HashMap<Integer, Set> sets = new HashMap<>(); // Maps index j to set
+    private static final LinkedHashMap<Integer, List<Tile>> tileTypes = new LinkedHashMap<>(); // Maps index i to type of tile
+    private static final LinkedHashMap<Integer, Set> sets = new LinkedHashMap<>(); // Maps index j to set
     private static boolean nativeLibrariesLoaded = false;
     private static final boolean debug = false;
 
     private final int ID;
+    private final String objectiveFunction;
     private boolean stuck;
 
-    public IntegerLinearProgramming(int id) {
+    public IntegerLinearProgramming(int id, String objectiveFunction) {
         this.ID = id;
+        this.objectiveFunction = objectiveFunction;
         this.stuck = false;
 
         if (tileTypes.isEmpty()) {
@@ -44,8 +46,16 @@ public class IntegerLinearProgramming implements Player {
         }
     }
 
+    public String getName() {
+        return "ILP";
+    }
+
     public int getID() {
         return ID;
+    }
+
+    public String getObjectiveFunction() {
+        return objectiveFunction;
     }
 
     public boolean isStuck() {
@@ -62,6 +72,7 @@ public class IntegerLinearProgramming implements Player {
         List<Integer> sValues = new ArrayList<>();
         List<Integer> tValues = new ArrayList<>();
         List<Integer> rValues = new ArrayList<>();
+        List<Integer> vValues = new ArrayList<>();
         List<MPVariable> xValues = new ArrayList<>();
         List<MPVariable> yValues = new ArrayList<>();
 
@@ -73,6 +84,7 @@ public class IntegerLinearProgramming implements Player {
 
         // t_i (p): tile i is 0, 1 or 2 times on the table
         // r_i (p): tile i is 0, 1 or 2 times on the player's rack
+        // v_i (p): value of tile i
         // y_i (v): tile i can be placed 0, 1 or 2 times from the player's rack onto the table
         // s_ij (p): indicates whether tile i is in set j (yes = 1, no = 0)
         List<Tile> tilesOnTable = currentState.fetchTilesOnTable();
@@ -113,13 +125,26 @@ public class IntegerLinearProgramming implements Player {
 
             tValues.add(t_i);
             rValues.add(r_i);
+            vValues.add(copies.get(0).getNUMBER());
             yValues.add(y_i);
         }
 
         // Objective function: maximize the number of tiles to draw from the player's rack onto the table
         MPObjective objective = solver.objective();
-        for (MPVariable y_i : yValues) {
-            objective.setCoefficient(y_i, 1);
+        for (int a = 0; a < yValues.size(); a++) {
+            MPVariable y_i = yValues.get(a);
+            int coefficient = 0;
+            if (objectiveFunction.equals("ttc")) {
+                coefficient = 1;
+            }
+            else if (objectiveFunction.equals("ttv")) {
+                coefficient = vValues.get(a);
+            }
+            else {
+                System.out.println("Error: invalid objective function \"" + objectiveFunction + "\"");
+                System.exit(0);
+            }
+            objective.setCoefficient(y_i, coefficient);
         }
         objective.setMaximization();
 
@@ -131,6 +156,7 @@ public class IntegerLinearProgramming implements Player {
             System.out.println("Number of s_ij parameters = " + sValues.size());
             System.out.println("Number of t_i parameters = " + tValues.size());
             System.out.println("Number of r_i parameters = " + rValues.size());
+            System.out.println("Number of v_i parameters = " + vValues.size());
             System.out.println("Number of x_j variables = " + xValues.size());
             System.out.println("Number of y_i variables = " + yValues.size() + "\n");
         }
@@ -174,9 +200,8 @@ public class IntegerLinearProgramming implements Player {
             List<Set> drawnSets = new ArrayList<>();
             for (Integer j : sets.keySet()) {
                 Set set = sets.get(j);
-                int x_j = (int) xValues.get(j - 1).solutionValue();
+                int differenceInNumber = (int) xValues.get(j - 1).solutionValue(); // x_j
 
-                int differenceInNumber = x_j;
                 if (currentState.getTABLE().containsKey(set)) {
                     differenceInNumber -= currentState.getTABLE().get(set).size();
                 }
@@ -216,6 +241,7 @@ public class IntegerLinearProgramming implements Player {
                 newState.addSetInstance(set, setInstance);
             }
 
+            newState.calculateScore(currentState, this);
             return newState;
         }
         else {
@@ -236,8 +262,8 @@ public class IntegerLinearProgramming implements Player {
         }
     }
 
-    public boolean checkWin(GameState currentState) {
-        return currentState.getRACKS().get(this).size() == 0;
+    public boolean checkWin(GameState state) {
+        return state.getRACKS().get(this).size() == 0;
     }
 
 }

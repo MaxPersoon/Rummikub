@@ -1,22 +1,31 @@
 package Players;
 
 import Main.GameState;
-import Main.Tile;
 
 import java.util.List;
 
 public class RandomPlayer implements Player {
 
     private final int ID;
+    private final String objectiveFunction;
     private boolean stuck;
 
-    public RandomPlayer(int id) {
+    public RandomPlayer(int id, String objectiveFunction) {
         this.ID = id;
+        this.objectiveFunction = objectiveFunction;
         this.stuck = false;
+    }
+
+    public String getName() {
+        return "Random";
     }
 
     public int getID() {
         return ID;
+    }
+
+    public String getObjectiveFunction() {
+        return objectiveFunction;
     }
 
     public boolean isStuck() {
@@ -34,8 +43,7 @@ public class RandomPlayer implements Player {
             // Return a randomly chosen move
             // Winning states are given priority
             for (GameState move : moves) {
-                List<Tile> playerRack = move.getRACKS().get(this);
-                if (playerRack.size() == 0) {
+                if (checkWin(move)) {
                     return move;
                 }
             }
@@ -50,8 +58,8 @@ public class RandomPlayer implements Player {
         }
     }
 
-    public boolean checkWin(GameState currentState) {
-        return currentState.getRACKS().get(this).size() == 0;
+    public boolean checkWin(GameState state) {
+        return state.getRACKS().get(this).size() == 0;
     }
 
 }

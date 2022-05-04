@@ -7,15 +7,25 @@ import java.util.List;
 public class GreedyPlayer implements Player {
 
     private final int ID;
+    private final String objectiveFunction;
     private boolean stuck;
 
-    public GreedyPlayer(int id) {
+    public GreedyPlayer(int id, String objectiveFunction) {
         this.ID = id;
+        this.objectiveFunction = objectiveFunction;
         this.stuck = false;
+    }
+
+    public String getName() {
+        return "Greedy";
     }
 
     public int getID() {
         return ID;
+    }
+
+    public String getObjectiveFunction() {
+        return objectiveFunction;
     }
 
     public boolean isStuck() {
@@ -30,23 +40,24 @@ public class GreedyPlayer implements Player {
         List<GameState> moves = currentState.getMoves(this);
 
         if (moves.size() >= 1) {
-            // Returns the state with the smallest rack size for this player
+            // Returns the state with the highest score
             // Winning states are given priority
-            GameState smallestRackState = null;
-            int smallestRackSize = Integer.MAX_VALUE;
+            GameState highestScoreState = null;
+            int highestScore = Integer.MIN_VALUE;
 
             for (GameState move : moves) {
-                int playerRackSize = move.getRACKS().get(this).size();
-                if (playerRackSize == 0) {
+                int score = move.getScore();
+
+                if (checkWin(move)) {
                     return move;
                 }
-                else if (playerRackSize < smallestRackSize) {
-                    smallestRackState = move;
-                    smallestRackSize = playerRackSize;
+                else if (score > highestScore) {
+                    highestScoreState = move;
+                    highestScore = score;
                 }
             }
 
-            return smallestRackState;
+            return highestScoreState;
         }
         else {
             System.out.println("Player #" + ID + " is unable to make a move\n");
@@ -55,8 +66,8 @@ public class GreedyPlayer implements Player {
         }
     }
 
-    public boolean checkWin(GameState currentState) {
-        return currentState.getRACKS().get(this).size() == 0;
+    public boolean checkWin(GameState state) {
+        return state.getRACKS().get(this).size() == 0;
     }
 
 }

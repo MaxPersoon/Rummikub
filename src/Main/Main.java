@@ -23,14 +23,29 @@ import java.util.List;
 public class Main extends Application {
 
     public static final String[] PLAYER_TYPES = {"ilp", "ilp"};
+    // random
+    // greedy
+    // ilp
+    public static final String[] OBJECTIVE_FUNCTIONS = {"ttc", "ttc"};
+    // ttc = total tile count
+    // ttv = total tile value
     public static final LinkedHashMap<Integer, List<double[]>> COORDINATES_RACKS = new LinkedHashMap<>(); // maps playerIDs to list of coordinates
     public static final List<List<double[]>> COORDINATES_TABLE = new ArrayList<>(); // each entry is a list of coordinates forming a set
 
     public static void main(String[] args) {
-        if (PLAYER_TYPES.length < 2 || PLAYER_TYPES.length > 4) {
+        int numberOfPlayers = PLAYER_TYPES.length;
+        int numberOfObjectiveFunctions = OBJECTIVE_FUNCTIONS.length;
+
+        if (numberOfPlayers < 2 || numberOfPlayers > 4) {
             System.out.println("Error: incorrect number of players");
             System.exit(0);
         }
+
+        if (numberOfPlayers != numberOfObjectiveFunctions) {
+            System.out.println("Error: incorrect number of objective functions (" + numberOfObjectiveFunctions + " instead of " + numberOfPlayers + ")");
+            System.exit(0);
+        }
+
         launch(args);
     }
 
