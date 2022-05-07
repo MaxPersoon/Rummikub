@@ -1,9 +1,6 @@
 package Main;
 
-import Players.GreedyPlayer;
-import Players.IntegerLinearProgramming;
-import Players.Player;
-import Players.RandomPlayer;
+import Players.*;
 import javafx.scene.Node;
 import javafx.scene.image.ImageView;
 
@@ -23,7 +20,7 @@ public class Game extends Thread {
         gameLoop();
     }
 
-    private static void initialize() {
+    private void initialize() {
         // Create tiles
         HashMap<String, List<Tile>> tilesWithColour = new HashMap<>();
         HashMap<Integer, List<Tile>> tilesWithNumber = new HashMap<>();
@@ -97,6 +94,7 @@ public class Game extends Thread {
                 case "random" -> PLAYERS.add(new RandomPlayer(id, objectiveFunction));
                 case "greedy" -> PLAYERS.add(new GreedyPlayer(id, objectiveFunction));
                 case "ilp" -> PLAYERS.add(new IntegerLinearProgramming(id, objectiveFunction));
+                case "alphabeta" -> PLAYERS.add(new AlphaBetaPlayer(id, objectiveFunction));
                 default -> {
                     System.out.println("Error: invalid player type \"" + playerType + "\"");
                     System.exit(0);
@@ -127,7 +125,7 @@ public class Game extends Thread {
         currentState.visualize();
     }
 
-    private static void gameLoop() {
+    private void gameLoop() {
         int turnCounter = 0;
         List<Player> winners = new ArrayList<>();
 
@@ -142,6 +140,19 @@ public class Game extends Thread {
                 long startTime = System.currentTimeMillis();
                 GameState newState = player.makeMove(currentState);
                 long endTime = System.currentTimeMillis();
+
+                // If the player cannot make a move, draw a tile from the pool (if possible)
+                if (newState == currentState) {
+                    if (currentState.getPOOL().size() >= 1) {
+                        newState = currentState.createChild();
+                        newState.drawTileFromPool(player);
+                    }
+                    else {
+                        System.out.println("Player #" + player.getID() + " is unable to make a move\n");
+                        player.stuck();
+                    }
+                }
+
                 if (newState != currentState) {
                     newState.setParent(currentState); // IMPORTANT FOR PROPER TERMINAL OUTPUT
                     newState.printMoveInfo(player);
@@ -209,6 +220,28 @@ public class Game extends Thread {
                 System.out.println("- Player #" + winner.getID() + " (" + winner.getName() + " w/ " + winner.getObjectiveFunction() + ")");
             }
         }
+    }
+
+    public static Player nextPlayer(Player currentPlayer) {
+        Player nextPlayer = null;
+
+        for (int i = 0; i < PLAYERS.size(); i++) {
+            Player player = PLAYERS.get(i);
+
+            if (player == currentPlayer) {
+                if (i + 1 < PLAYERS.size()) {
+                    // List goes on --> next player is next entry in list
+                    nextPlayer = PLAYERS.get(i + 1);
+                }
+                else {
+                    // Reached end of list --> next player is first entry in list
+                    nextPlayer = PLAYERS.get(0);
+                }
+                break;
+            }
+        }
+
+        return nextPlayer;
     }
 
 }

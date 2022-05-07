@@ -22,13 +22,16 @@ import java.util.List;
 
 public class Main extends Application {
 
-    public static final String[] PLAYER_TYPES = {"ilp", "ilp"};
+    public static final String[] PLAYER_TYPES = {"ilp", "alphabeta"};
     // random
     // greedy
     // ilp
+    // alphabeta
     public static final String[] OBJECTIVE_FUNCTIONS = {"ttc", "ttc"};
     // ttc = total tile count
     // ttv = total tile value
+    // ttcwscm = total tile count with set change minimization
+    // ttvwscm = total tile value with set change minimization
     public static final LinkedHashMap<Integer, List<double[]>> COORDINATES_RACKS = new LinkedHashMap<>(); // maps playerIDs to list of coordinates
     public static final List<List<double[]>> COORDINATES_TABLE = new ArrayList<>(); // each entry is a list of coordinates forming a set
 

@@ -32,26 +32,26 @@ public class GreedyPlayer implements Player {
         return stuck;
     }
 
+    public void stuck() {
+        this.stuck = true;
+    }
+
     public void unstuck() {
         this.stuck = false;
     }
 
     public GameState makeMove(GameState currentState) {
-        List<GameState> moves = currentState.getMoves(this);
+        List<GameState> moves = currentState.getMoves(this, this, objectiveFunction, 500);
 
         if (moves.size() >= 1) {
             // Returns the state with the highest score
-            // Winning states are given priority
             GameState highestScoreState = null;
             double highestScore = Double.NEGATIVE_INFINITY;
 
             for (GameState move : moves) {
                 double score = move.getScore();
 
-                if (checkWin(move)) {
-                    return move;
-                }
-                else if (score > highestScore) {
+                if (score > highestScore) {
                     highestScoreState = move;
                     highestScore = score;
                 }
@@ -60,8 +60,6 @@ public class GreedyPlayer implements Player {
             return highestScoreState;
         }
         else {
-            System.out.println("Player #" + ID + " is unable to make a move\n");
-            this.stuck = true;
             return currentState;
         }
     }

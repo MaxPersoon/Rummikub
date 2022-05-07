@@ -32,28 +32,23 @@ public class RandomPlayer implements Player {
         return stuck;
     }
 
+    public void stuck() {
+        this.stuck = true;
+    }
+
     public void unstuck() {
         this.stuck = false;
     }
 
     public GameState makeMove(GameState currentState) {
-        List<GameState> moves = currentState.getMoves(this);
+        List<GameState> moves = currentState.getMoves(this, this, objectiveFunction, 500);
 
         if (moves.size() >= 1) {
             // Return a randomly chosen move
-            // Winning states are given priority
-            for (GameState move : moves) {
-                if (checkWin(move)) {
-                    return move;
-                }
-            }
-
             int randomIndex = (int) (Math.random() * moves.size());
             return moves.get(randomIndex);
         }
         else {
-            System.out.println("Player #" + ID + " is unable to make a move\n");
-            this.stuck = true;
             return currentState;
         }
     }

@@ -12,10 +12,12 @@ public interface Player {
 
     boolean isStuck();
 
+    void stuck();
+
     void unstuck();
 
     GameState makeMove(GameState currentState);
 
-    boolean checkWin(GameState currentState);
+    boolean checkWin(GameState state);
 
 }

@@ -9,8 +9,8 @@ import java.util.List;
 
 public class GameState {
 
-    private static long startTime = 0;
-    private static final int maximumTime = 500;
+    private static long startTime;
+    private static int maximumTime; // in ms
 
     private String id;
     private int depth;
@@ -143,8 +143,7 @@ public class GameState {
         this.score = score;
     }
 
-    public void calculateScore(GameState currentState, Player player) {
-        String objectiveFunction = player.getObjectiveFunction();
+    public void calculateScore(GameState currentState, Player player, String objectiveFunction) {
         List<Tile> currentPlayerRack = currentState.getRACKS().get(player);
         List<Tile> potentialPlayerRack = RACKS.get(player);
 
@@ -166,10 +165,11 @@ public class GameState {
         }
     }
 
-    public List<GameState> getMoves(Player player) {
+    public List<GameState> getMoves(Player player, Player playerScore, String objectiveFunction, int maxTime) {
         List<GameState> moves = new ArrayList<>();
         List<GameState> movesAndDummy = new ArrayList<>();
 
+        maximumTime = maxTime;
         startTime = System.currentTimeMillis();
         recursivelyEnumerateMoves(player, moves, movesAndDummy);
 
@@ -200,18 +200,7 @@ public class GameState {
 
         // Calculate scores
         for (GameState move : moves) {
-            move.calculateScore(this, player);
-        }
-
-        // If the player cannot make a move, draw a tile from the pool (if possible)
-        if (moves.size() == 0) {
-            if (POOL.size() >= 1) {
-                GameState move = createChild();
-
-                move.drawTileFromPool(player);
-
-                moves.add(move);
-            }
+            move.calculateScore(this, playerScore, objectiveFunction);
         }
 
         return moves;

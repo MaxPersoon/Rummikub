@@ -62,6 +62,10 @@ public class IntegerLinearProgramming implements Player {
         return stuck;
     }
 
+    public void stuck() {
+        this.stuck = true;
+    }
+
     public void unstuck() {
         this.stuck = false;
     }
@@ -70,23 +74,48 @@ public class IntegerLinearProgramming implements Player {
         // Create the linear solver with the SCIP backend.
         MPSolver solver = MPSolver.createSolver("SCIP");
         List<Integer> sValues = new ArrayList<>();
+        List<Integer> wValues = new ArrayList<>();
         List<Integer> tValues = new ArrayList<>();
         List<Integer> rValues = new ArrayList<>();
         List<Integer> vValues = new ArrayList<>();
         List<MPVariable> xValues = new ArrayList<>();
+        List<MPVariable> zValues = new ArrayList<>();
         List<MPVariable> yValues = new ArrayList<>();
 
-        // x_j (v): set j can be placed 0, 1 or 2 times onto the table
-        for (Integer j : sets.keySet()) {
-            MPVariable x_j = solver.makeIntVar(0, 2, "x_" + j);
-            xValues.add(x_j);
-        }
-
+        // s_ij (p): indicates whether tile i is in set j (yes = 1, no = 0)
+        // w_j (p): set j is 0, 1 or 2 times on the table
         // t_i (p): tile i is 0, 1 or 2 times on the table
         // r_i (p): tile i is 0, 1 or 2 times on the player's rack
         // v_i (p): value of tile i
+        // x_j (v): set j can be placed 0, 1 or 2 times onto the table
+        // z_j (v): set j occurs 0, 1 or 2 times in the old and in the new solutions
         // y_i (v): tile i can be placed 0, 1 or 2 times from the player's rack onto the table
-        // s_ij (p): indicates whether tile i is in set j (yes = 1, no = 0)
+
+        for (Integer j : sets.keySet()) {
+            MPVariable x_j = solver.makeIntVar(0, 2, "x_" + j);
+            xValues.add(x_j);
+
+            if (objectiveFunction.contains("wscm")) {
+                int w_j = 0;
+
+                Set set = sets.get(j);
+                LinkedHashMap<Set, List<List<Tile>>> table = currentState.getTABLE();
+                if (table.containsKey(set)) {
+                    w_j = table.get(set).size();
+                }
+
+                MPVariable z_j = solver.makeIntVar(0, 2, "z_" + j);
+                MPConstraint constraint1 = solver.makeConstraint(Double.NEGATIVE_INFINITY, 0, "constraint #1 z_" + j);
+                constraint1.setCoefficient(z_j, 1);
+                constraint1.setCoefficient(x_j, -1);
+                MPConstraint constraint2 = solver.makeConstraint(Double.NEGATIVE_INFINITY, w_j, "constraint #2 z_" + j);
+                constraint2.setCoefficient(z_j, 1);
+
+                wValues.add(w_j);
+                zValues.add(z_j);
+            }
+        }
+
         List<Tile> tilesOnTable = currentState.fetchTilesOnTable();
         List<Tile> tilesOnRack = new ArrayList<>(List.copyOf(currentState.getRACKS().get(this)));
         for (Integer i : tileTypes.keySet()) {
@@ -125,28 +154,36 @@ public class IntegerLinearProgramming implements Player {
 
             tValues.add(t_i);
             rValues.add(r_i);
-            vValues.add(copies.get(0).getNUMBER());
             yValues.add(y_i);
+
+            if (objectiveFunction.contains("ttv")) {
+                vValues.add(copies.get(0).getNUMBER());
+            }
         }
 
-        // Objective function: maximize the number of tiles to draw from the player's rack onto the table
+        // Objective function
         MPObjective objective = solver.objective();
-        for (int a = 0; a < yValues.size(); a++) {
-            MPVariable y_i = yValues.get(a);
-            int coefficient = 0;
-            if (objectiveFunction.equals("ttc")) {
-                coefficient = 1;
-            }
-            else if (objectiveFunction.equals("ttv")) {
-                coefficient = vValues.get(a);
-            }
-            else {
-                System.out.println("Error: invalid objective function \"" + objectiveFunction + "\"");
-                System.exit(0);
-            }
-            objective.setCoefficient(y_i, coefficient);
-        }
         objective.setMaximization();
+
+        if (objectiveFunction.contains("ttc")) {
+            for (MPVariable y_i : yValues) {
+                objective.setCoefficient(y_i, 1);
+            }
+        } else if (objectiveFunction.contains("ttv")) {
+            for (int a = 0; a < yValues.size(); a++) {
+                objective.setCoefficient(yValues.get(a), vValues.get(a));
+            }
+        } else {
+            System.out.println("Error: invalid objective function \"" + objectiveFunction + "\"");
+            System.exit(0);
+        }
+
+        if (objectiveFunction.contains("wscm")) {
+            double M = 40;
+            for (MPVariable z_j : zValues) {
+                objective.setCoefficient(z_j, 1.0 / M);
+            }
+        }
 
         // Debugging
         if (debug) {
@@ -156,9 +193,19 @@ public class IntegerLinearProgramming implements Player {
             System.out.println("Number of s_ij parameters = " + sValues.size());
             System.out.println("Number of t_i parameters = " + tValues.size());
             System.out.println("Number of r_i parameters = " + rValues.size());
-            System.out.println("Number of v_i parameters = " + vValues.size());
             System.out.println("Number of x_j variables = " + xValues.size());
-            System.out.println("Number of y_i variables = " + yValues.size() + "\n");
+            System.out.println("Number of y_i variables = " + yValues.size());
+
+            if (objectiveFunction.contains("ttv")) {
+                System.out.println("Number of v_i parameters = " + vValues.size());
+            }
+
+            if (objectiveFunction.contains("wscm")) {
+                System.out.println("Number of w_j parameters = " + wValues.size());
+                System.out.println("Number of z_j variables = " + zValues.size());
+            }
+
+            System.out.println();
         }
 
         // Solve
@@ -249,16 +296,7 @@ public class IntegerLinearProgramming implements Player {
                 System.out.println("<<< DEBUG END >>>");
             }
 
-            // Draw a tile from the pool (if possible)
-            if (currentState.getPOOL().size() >= 1) {
-                newState.drawTileFromPool(this);
-                return newState;
-            }
-            else {
-                System.out.println("Player #" + ID + " is unable to make a move\n");
-                this.stuck = true;
-                return currentState;
-            }
+            return currentState;
         }
     }
 
