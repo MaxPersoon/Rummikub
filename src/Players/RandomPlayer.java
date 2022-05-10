@@ -41,7 +41,7 @@ public class RandomPlayer implements Player {
     }
 
     public GameState makeMove(GameState currentState) {
-        List<GameState> moves = currentState.getMoves(this, this, objectiveFunction, 500);
+        List<GameState> moves = currentState.getMoves(this, this, objectiveFunction, 500, 50);
 
         if (moves.size() >= 1) {
             // Return a randomly chosen move

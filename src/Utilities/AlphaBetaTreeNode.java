@@ -74,7 +74,7 @@ public class AlphaBetaTreeNode {
 
     public List<GameState> getMoves(Player playerScore, String objectiveFunction) {
         state.setDepth(1);
-        return state.getMoves(player, playerScore, objectiveFunction, 50);
+        return state.getMoves(player, playerScore, objectiveFunction, 50, 25);
     }
 
 }

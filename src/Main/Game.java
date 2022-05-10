@@ -41,6 +41,11 @@ public class Game extends Thread {
             }
         }
 
+        Tile jokerCopy1 = new Tile(TILES.size() + 1, 30, "joker", (ImageView) nodes.get(TILES.size() + 1));
+        Tile jokerCopy2 = new Tile(TILES.size() + 2, 30, "joker", (ImageView) nodes.get(TILES.size() + 2));
+        TILES.add(jokerCopy1);
+        TILES.add(jokerCopy2);
+
 //        for (Tile tile : TILES) {
 //            tile.print();
 //        }
@@ -52,6 +57,7 @@ public class Game extends Thread {
             // Size 4
             Set set = new Set(SETS.size() + 1, "group", tilesWithSpecificNumber);
             SETS.add(set);
+            putJokersInSet("group", tilesWithSpecificNumber);
 
             // Size 3
             for (Tile tile : tilesWithSpecificNumber) {
@@ -60,6 +66,7 @@ public class Game extends Thread {
 
                 set = new Set(SETS.size() + 1, "group", tilesWithSpecificNumberCopy);
                 SETS.add(set);
+                putJokersInSet("group", tilesWithSpecificNumberCopy);
             }
         }
 
@@ -75,6 +82,7 @@ public class Game extends Thread {
                     if (run.size() >= 3) {
                         Set set = new Set(SETS.size() + 1, "run", run);
                         SETS.add(set);
+                        putJokersInSet("run", run);
                     }
                 }
             }
@@ -120,9 +128,58 @@ public class Game extends Thread {
             }
         }
 
+        // Force a setup
+//        String player1CustomRack = "30 joker,30 joker,1 blue";
+//        String player2CustomRack = "1 black,1 red,1 orange";
+//
+//        List<String> customRacks = new ArrayList<>();
+//        customRacks.add(player1CustomRack);
+//        customRacks.add(player2CustomRack);
+//        customSetup(customRacks, racks, pool);
+
         currentState = new GameState(racks, table, pool);
         currentState.printRacks();
         currentState.visualize();
+    }
+
+    private void putJokersInSet(String type, List<Tile> tiles) {
+        Tile joker = TILES.get(TILES.size() - 2);
+
+        for (int i = 0; i < tiles.size(); i++) {
+            List<Tile> tilesOneJoker = new ArrayList<>(List.copyOf(tiles));
+            tilesOneJoker.set(i, joker);
+            Set jokerSet = new Set(SETS.size() + 1, type, tilesOneJoker);
+            SETS.add(jokerSet);
+
+            for (int j = i + 1; j < tiles.size(); j++) {
+                List<Tile> tilesTwoJokers = new ArrayList<>(List.copyOf(tilesOneJoker));
+                tilesTwoJokers.set(j, joker);
+                jokerSet = new Set(SETS.size() + 1, type, tilesTwoJokers);
+                SETS.add(jokerSet);
+            }
+        }
+    }
+
+    private void customSetup(List<String> customRacks, LinkedHashMap<Player, List<Tile>> racks, List<Tile> pool) {
+        for (int i = 0; i < customRacks.size(); i++) {
+            Player player = PLAYERS.get(i);
+            String customRack = customRacks.get(i);
+
+            String[] tiles = customRack.split(",");
+            for (String tile : tiles) {
+                String[] attributes = tile.split(" ");
+                int tileNumber = Integer.parseInt(attributes[0]);
+                String tileColour = attributes[1];
+
+                for (Tile poolTile : pool) {
+                    if (poolTile.getNUMBER() == tileNumber && poolTile.getCOLOUR().equals(tileColour)) {
+                        racks.get(player).add(poolTile);
+                        pool.remove(poolTile);
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     private void gameLoop() {

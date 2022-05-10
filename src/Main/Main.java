@@ -22,12 +22,12 @@ import java.util.List;
 
 public class Main extends Application {
 
-    public static final String[] PLAYER_TYPES = {"ilp", "alphabeta"};
+    public static final String[] PLAYER_TYPES = {"alphabeta", "alphabeta"};
     // random
     // greedy
     // ilp
     // alphabeta
-    public static final String[] OBJECTIVE_FUNCTIONS = {"ttc", "ttc"};
+    public static final String[] OBJECTIVE_FUNCTIONS = {"ttv", "ttv"};
     // ttc = total tile count
     // ttv = total tile value
     // ttcwscm = total tile count with set change minimization
@@ -168,6 +168,16 @@ public class Main extends Application {
                 }
             }
         }
+
+        for (int i = 0; i < 2; i++) {
+            ImageView tileImage = new ImageView(new Image(new FileInputStream("resources/tiles/joker.png")));
+            tileImage.setFitWidth(TILE_WIDTH);
+            tileImage.setFitHeight(TILE_HEIGHT);
+            tileImage.setPreserveRatio(true);
+            tileImage.setVisible(false);
+            nodesToPassThrough.add(tileImage);
+        }
+
         nodes.addAll(nodesToPassThrough);
 
         Scene scene = new Scene(root, 1905, 770);

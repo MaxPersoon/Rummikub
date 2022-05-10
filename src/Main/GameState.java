@@ -11,6 +11,7 @@ public class GameState {
 
     private static long startTime;
     private static int maximumTime; // in ms
+    private static int maximumDepth;
 
     private String id;
     private int depth;
@@ -165,10 +166,11 @@ public class GameState {
         }
     }
 
-    public List<GameState> getMoves(Player player, Player playerScore, String objectiveFunction, int maxTime) {
+    public List<GameState> getMoves(Player player, Player playerScore, String objectiveFunction, int maxTime, int maxDepth) {
         List<GameState> moves = new ArrayList<>();
         List<GameState> movesAndDummy = new ArrayList<>();
 
+        maximumDepth = maxDepth;
         maximumTime = maxTime;
         startTime = System.currentTimeMillis();
         recursivelyEnumerateMoves(player, moves, movesAndDummy);
@@ -214,7 +216,7 @@ public class GameState {
     }
 
     private void recursivelyEnumerateMoves(Player player, List<GameState> moves, List<GameState> movesAndDummy) {
-        if (depth < 50 && (System.currentTimeMillis() - startTime) < maximumTime) {
+        if (depth < maximumDepth && (System.currentTimeMillis() - startTime) < maximumTime) {
             List<Tile> playerRack = this.RACKS.get(player);
 
             // Draw set from rack on table
@@ -240,36 +242,127 @@ public class GameState {
                 }
             }
 
-            // Merge two runs to make a new run
-            for (Set set1 : TABLE.keySet()) {
-                if (set1.getTYPE().equals("run")) {
-                    for (Set set2 : TABLE.keySet()) {
-                        if (set2.getTYPE().equals("run") && set1 != set2) {
-                            List<Tile> set1Instance = TABLE.get(set1).get(0);
-                            Tile set1FirstTile = set1Instance.get(0);
-                            Tile set1LastTile = set1Instance.get(set1Instance.size() - 1);
-                            List<Tile> set2Instance = TABLE.get(set2).get(0);
-                            Tile set2FirstTile = set2Instance.get(0);
-                            Tile set2LastTile = set2Instance.get(set2Instance.size() - 1);
+            // Replace joker tiles on table with equivalent tiles from rack
+            for (Set set : TABLE.keySet()) {
+                List<Tile> setInstance = TABLE.get(set).get(0);
 
-                            if (set1FirstTile.getCOLOUR().equals(set2FirstTile.getCOLOUR())) {
-                                if (set1LastTile.getNUMBER() == set2FirstTile.getNUMBER() - 1 ||
-                                        set1FirstTile.getNUMBER() == set2LastTile.getNUMBER() + 1) {
+                for (int i = 0; i < setInstance.size(); i++) {
+                    Tile tile = setInstance.get(i);
+
+                    if (tile.getCOLOUR().equals("joker")) {
+                        int tileNumber = 0;
+                        List<String> tileColours = new ArrayList<>();
+
+                        if (set.getTYPE().equals("group")) {
+                            tileColours.add("black");
+                            tileColours.add("red");
+                            tileColours.add("orange");
+                            tileColours.add("blue");
+
+                            for (Tile tile_ : setInstance) {
+                                String colour = tile_.getCOLOUR();
+
+                                if (!colour.equals("joker")) {
+                                    tileNumber = tile_.getNUMBER();
+                                    tileColours.removeIf(tileColour -> tileColour.equals(colour));
+                                }
+                            }
+                        } else {
+                            // run
+                            if (i == 0) {
+                                Tile nextTile = setInstance.get(1);
+                                tileNumber = nextTile.getNUMBER() - 1;
+                                tileColours.add(nextTile.getCOLOUR());
+                            } else {
+                                Tile previousTile = setInstance.get(i - 1);
+                                tileNumber = previousTile.getNUMBER() + 1;
+                                tileColours.add(previousTile.getCOLOUR());
+                            }
+                        }
+
+                        // Find equivalent tile in rack
+                        for (Tile tile_ : playerRack) {
+                            for (String tileColour : tileColours) {
+                                if (tile_.getCOLOUR().equals(tileColour) && tile_.getNUMBER() == tileNumber) {
                                     // Perform move
                                     GameState dummy = createChild();
 
-                                    List<Tile> newSetInstance = new ArrayList<>();
-                                    newSetInstance.addAll(set1Instance);
-                                    newSetInstance.addAll(set2Instance);
+                                    dummy.RACKS.get(player).remove(tile_);
+                                    dummy.RACKS.get(player).add(tile);
                                     LinkedHashMap<Set, List<Tile>> setInstances = new LinkedHashMap<>();
-                                    setInstances.put(set1, set1Instance);
-                                    setInstances.put(set2, set2Instance);
+                                    setInstances.put(set, setInstance);
+                                    List<Tile> newSetInstance = new ArrayList<>(List.copyOf(setInstance));
+                                    newSetInstance.remove(tile);
+                                    newSetInstance.add(tile_);
                                     List<List<Tile>> newSetInstances = new ArrayList<>();
                                     newSetInstances.add(newSetInstance);
                                     dummy.replaceSetInstances(setInstances, newSetInstances);
 
                                     if (dummy.isWorthExploring(movesAndDummy)) {
                                         dummy.recursivelyEnumerateMoves(player, moves, movesAndDummy);
+                                    }
+                                }
+                            }
+                        }
+
+                        break;
+                    }
+                }
+            }
+
+            // Merge two runs to make a new run
+            for (Set set1 : TABLE.keySet()) {
+                if (set1.getTYPE().equals("run")) {
+                    for (Set set2 : TABLE.keySet()) {
+                        if (set2.getTYPE().equals("run") && set1 != set2) {
+                            List<Tile> set1Instance = TABLE.get(set1).get(0);
+                            List<Tile> set2Instance = TABLE.get(set2).get(0);
+
+                            String set1Colour = "";
+                            for (Tile tile : set1Instance) {
+                                String tileColour = tile.getCOLOUR();
+                                if (!tileColour.equals("joker")) {
+                                    set1Colour = tileColour;
+                                    break;
+                                }
+                            }
+
+                            String set2Colour = "";
+                            for (Tile tile : set2Instance) {
+                                String tileColour = tile.getCOLOUR();
+                                if (!tileColour.equals("joker")) {
+                                    set2Colour = tileColour;
+                                    break;
+                                }
+                            }
+
+                            if (set1Colour.equals(set2Colour)) {
+                                List<Tile> combination1 = new ArrayList<>();
+                                combination1.addAll(set1Instance);
+                                combination1.addAll(set2Instance);
+                                List<Tile> combination2 = new ArrayList<>();
+                                combination2.addAll(set2Instance);
+                                combination2.addAll(set1Instance);
+
+                                List<List<Tile>> combinations = new ArrayList<>();
+                                combinations.add(combination1);
+                                combinations.add(combination2);
+
+                                for (List<Tile> combination : combinations) {
+                                    if (isLegalMergedSet(combination)) {
+                                        // Perform move
+                                        GameState dummy = createChild();
+
+                                        LinkedHashMap<Set, List<Tile>> setInstances = new LinkedHashMap<>();
+                                        setInstances.put(set1, set1Instance);
+                                        setInstances.put(set2, set2Instance);
+                                        List<List<Tile>> newSetInstances = new ArrayList<>();
+                                        newSetInstances.add(combination);
+                                        dummy.replaceSetInstances(setInstances, newSetInstances);
+
+                                        if (dummy.isWorthExploring(movesAndDummy)) {
+                                            dummy.recursivelyEnumerateMoves(player, moves, movesAndDummy);
+                                        }
                                     }
                                 }
                             }
@@ -498,6 +591,38 @@ public class GameState {
 
         movesAndDummy.add(this);
         return true;
+    }
+
+    private boolean isLegalMergedSet(List<Tile> mergedSet) {
+        if (mergedSet.size() > 13) {
+            return false;
+        }
+
+        List<Tile> mergedSetWithoutJokers = new ArrayList<>();
+        for (Tile tile : mergedSet) {
+            if (!tile.getCOLOUR().equals("joker")) {
+                mergedSetWithoutJokers.add(tile);
+            }
+        }
+
+        int requiredNumberOfJokers = 0;
+        for (int i = 1; i < mergedSetWithoutJokers.size(); i++) {
+            Tile previousTile = mergedSetWithoutJokers.get(i - 1);
+            Tile currentTile = mergedSetWithoutJokers.get(i);
+
+            int numberDifference = currentTile.getNUMBER() - previousTile.getNUMBER();
+            if (numberDifference >= 1) {
+                requiredNumberOfJokers += numberDifference - 1;
+                if (requiredNumberOfJokers > 2) {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+
+        int numberOfJokers = mergedSet.size() - mergedSetWithoutJokers.size();
+        return numberOfJokers >= requiredNumberOfJokers;
     }
 
     public void printRacks() {

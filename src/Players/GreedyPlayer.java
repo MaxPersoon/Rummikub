@@ -41,7 +41,7 @@ public class GreedyPlayer implements Player {
     }
 
     public GameState makeMove(GameState currentState) {
-        List<GameState> moves = currentState.getMoves(this, this, objectiveFunction, 500);
+        List<GameState> moves = currentState.getMoves(this, this, objectiveFunction, 500, 50);
 
         if (moves.size() >= 1) {
             // Returns the state with the highest score
