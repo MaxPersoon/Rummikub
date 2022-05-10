@@ -3,7 +3,9 @@ package Players;
 import Main.Game;
 import Main.GameState;
 import Utilities.AlphaBetaTreeNode;
+import Utilities.Mergesort;
 
+import java.util.Collections;
 import java.util.List;
 
 public class AlphaBetaPlayer implements Player {
@@ -123,13 +125,18 @@ public class AlphaBetaPlayer implements Player {
         }
 
         Player nextPlayer = Game.nextPlayer(node.getPlayer());
+        for (GameState move : moves) {
+            new AlphaBetaTreeNode(node, move, nextPlayer);
+        }
+        List<AlphaBetaTreeNode> sortedChildren = Mergesort.mergesort(node.getChildren());
+
         AlphaBetaTreeNode valueNode;
         if (node.getPlayer() == this) {
             // Maximizing player
             valueNode = new AlphaBetaTreeNode(Double.NEGATIVE_INFINITY);
 
-            for (GameState move : moves) {
-                AlphaBetaTreeNode child = new AlphaBetaTreeNode(node, move, nextPlayer);
+            Collections.reverse(sortedChildren);
+            for (AlphaBetaTreeNode child : sortedChildren) {
                 AlphaBetaTreeNode recursiveNode = buildAndSearchTree(child, alpha, beta);
                 if (recursiveNode.getScore() > valueNode.getScore()) {
                     valueNode = recursiveNode;
@@ -145,8 +152,7 @@ public class AlphaBetaPlayer implements Player {
             // Minimizing player
             valueNode = new AlphaBetaTreeNode(Double.POSITIVE_INFINITY);
 
-            for (GameState move : moves) {
-                AlphaBetaTreeNode child = new AlphaBetaTreeNode(node, move, nextPlayer);
+            for (AlphaBetaTreeNode child : sortedChildren) {
                 AlphaBetaTreeNode recursiveNode = buildAndSearchTree(child, alpha, beta);
                 if (recursiveNode.getScore() < valueNode.getScore()) {
                     valueNode = recursiveNode;

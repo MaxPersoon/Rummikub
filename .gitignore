@@ -73,3 +73,4 @@ out/production/Rummikub/Players/IntegerLinearProgramming.class
 .idea/inspectionProfiles/Project_Default.xml
 out/production/Rummikub/Players/AlphaBetaPlayer.class
 out/production/Rummikub/Utilities/AlphaBetaTreeNode.class
+out/production/Rummikub/Utilities/Mergesort.class
