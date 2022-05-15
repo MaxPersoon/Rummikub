@@ -7,56 +7,60 @@ import java.util.List;
 
 public class Tile {
 
-    private final int ID;
-    private final int NUMBER;
-    private final String COLOUR;
-    private final List<Set> SETS;
-    private final ImageView IMAGE;
+    private final int id;
+    private final int number;
+    private final String colour;
+    private final List<Set> sets;
+    private ImageView image;
 
-    public Tile(int id, int number, String colour, ImageView image) {
-        this.ID = id;
-        this.NUMBER = number;
-        this.COLOUR = colour;
-        this.SETS = new ArrayList<>();
-        this.IMAGE = image;
+    public Tile(int id, int number, String colour) {
+        this.id = id;
+        this.number = number;
+        this.colour = colour;
+        this.sets = new ArrayList<>();
+        this.image = null;
     }
 
-    public int getID() {
-        return ID;
+    public int getId() {
+        return id;
     }
 
-    public int getNUMBER() {
-        return NUMBER;
+    public int getNumber() {
+        return number;
     }
 
-    public String getCOLOUR() {
-        return COLOUR;
+    public String getColour() {
+        return colour;
     }
 
-    public List<Set> getSETS() {
-        return SETS;
+    public List<Set> getSets() {
+        return sets;
     }
 
     public ImageView getImage() {
-        return IMAGE;
+        return image;
     }
 
     public void addSet(Set set) {
-        this.SETS.add(set);
+        this.sets.add(set);
+    }
+
+    public void setImage(ImageView image) {
+        this.image = image;
     }
 
     public void setImageCoordinates(double[] coordinates) {
-        this.IMAGE.setX(coordinates[0]);
-        this.IMAGE.setY(coordinates[1]);
-        this.IMAGE.setVisible(true);
+        this.image.setX(coordinates[0]);
+        this.image.setY(coordinates[1]);
+        this.image.setVisible(true);
     }
 
     public void print() {
-        System.out.println("Tile #" + this.ID + ": " + this.NUMBER + ", " + this.COLOUR);
+        System.out.println("Tile #" + this.id + ": " + this.number + ", " + this.colour);
     }
 
     public boolean isMatch(Tile tileToCheck) {
-        return this.NUMBER == tileToCheck.NUMBER && this.COLOUR.equals(tileToCheck.COLOUR);
+        return this.number == tileToCheck.number && this.colour.equals(tileToCheck.colour);
     }
 
 }

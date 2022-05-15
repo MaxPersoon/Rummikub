@@ -8,20 +8,45 @@ import java.util.*;
 
 public class Game extends Thread {
 
-    public static final List<Tile> TILES = new ArrayList<>();
-    public static final List<Set> SETS = new ArrayList<>();
-    public static final List<Player> PLAYERS = new ArrayList<>();
-    public static final List<GameState> PREVIOUS_STATES = new ArrayList<>();
-    public static GameState currentState;
+    public static final int maximumMoveTime = 500; // ms
+
+    public static String[] playerTypes;
+    public static String[] objectiveFunctions;
+    public static boolean experimenting;
     public static List<Node> nodes;
 
+    public static List<Tile> tiles;
+    public static List<Set> sets;
+    public static List<Player> players;
+    public static List<GameState> previousStates;
+    public static GameState currentState;
+
     public void run() {
+        // Validity check
+        int numberOfPlayers = playerTypes.length;
+        int numberOfObjectiveFunctions = objectiveFunctions.length;
+
+        if (numberOfPlayers < 2 || numberOfPlayers > 4) {
+            System.out.println("Error: incorrect number of players");
+            System.exit(0);
+        }
+
+        if (numberOfPlayers != numberOfObjectiveFunctions) {
+            System.out.println("Error: incorrect number of objective functions (" + numberOfObjectiveFunctions + " instead of " + numberOfPlayers + ")");
+            System.exit(0);
+        }
+
         initialize();
         gameLoop();
     }
 
     private void initialize() {
-        // Create tiles
+        tiles = new ArrayList<>();
+        sets = new ArrayList<>();
+        players = new ArrayList<>();
+        previousStates = new ArrayList<>();
+
+        // Create default tiles
         HashMap<String, List<Tile>> tilesWithColour = new HashMap<>();
         HashMap<Integer, List<Tile>> tilesWithNumber = new HashMap<>();
 
@@ -29,10 +54,17 @@ public class Game extends Thread {
         for (String colour : colours) {
             tilesWithColour.put(colour, new ArrayList<>());
             for (int number = 1; number <= 13; number++) {
-                Tile copy1 = new Tile(TILES.size() + 1, number, colour, (ImageView) nodes.get(TILES.size() + 1));
-                Tile copy2 = new Tile(TILES.size() + 2, number, colour, (ImageView) nodes.get(TILES.size() + 2));
-                TILES.add(copy1);
-                TILES.add(copy2);
+                Tile copy1 = new Tile(tiles.size() + 1, number, colour);
+                Tile copy2 = new Tile(tiles.size() + 2, number, colour);
+
+                if (!experimenting) {
+                    copy1.setImage((ImageView) nodes.get(tiles.size() + 1));
+                    copy2.setImage((ImageView) nodes.get(tiles.size() + 2));
+                }
+
+                tiles.add(copy1);
+                tiles.add(copy2);
+
                 tilesWithColour.get(colour).add(copy1);
                 if (!tilesWithNumber.containsKey(number)) {
                     tilesWithNumber.put(number, new ArrayList<>());
@@ -41,22 +73,31 @@ public class Game extends Thread {
             }
         }
 
-        Tile jokerCopy1 = new Tile(TILES.size() + 1, 30, "joker", (ImageView) nodes.get(TILES.size() + 1));
-        Tile jokerCopy2 = new Tile(TILES.size() + 2, 30, "joker", (ImageView) nodes.get(TILES.size() + 2));
-        TILES.add(jokerCopy1);
-        TILES.add(jokerCopy2);
+        // Create joker tiles
+        Tile jokerCopy1 = new Tile(tiles.size() + 1, 30, "joker");
+        Tile jokerCopy2 = new Tile(tiles.size() + 2, 30, "joker");
 
-//        for (Tile tile : TILES) {
+        if (!experimenting) {
+            jokerCopy1.setImage((ImageView) nodes.get(tiles.size() + 1));
+            jokerCopy2.setImage((ImageView) nodes.get(tiles.size() + 2));
+        }
+
+        tiles.add(jokerCopy1);
+        tiles.add(jokerCopy2);
+
+        // Debugging: print each tile's info
+//        for (Tile tile : tiles) {
 //            tile.print();
 //        }
 
+        // Create sets
         // Create groups
         for (int i = 1; i <= 13; i++) {
             List<Tile> tilesWithSpecificNumber = tilesWithNumber.get(i);
 
             // Size 4
-            Set set = new Set(SETS.size() + 1, "group", tilesWithSpecificNumber);
-            SETS.add(set);
+            Set set = new Set(sets.size() + 1, "group", tilesWithSpecificNumber);
+            sets.add(set);
             putJokersInSet("group", tilesWithSpecificNumber);
 
             // Size 3
@@ -64,8 +105,8 @@ public class Game extends Thread {
                 List<Tile> tilesWithSpecificNumberCopy = new ArrayList<>(List.copyOf(tilesWithSpecificNumber));
                 tilesWithSpecificNumberCopy.remove(tile);
 
-                set = new Set(SETS.size() + 1, "group", tilesWithSpecificNumberCopy);
-                SETS.add(set);
+                set = new Set(sets.size() + 1, "group", tilesWithSpecificNumberCopy);
+                sets.add(set);
                 putJokersInSet("group", tilesWithSpecificNumberCopy);
             }
         }
@@ -80,29 +121,29 @@ public class Game extends Thread {
                 for (Tile tile : tilesWithSpecificColour) {
                     run.add(tile);
                     if (run.size() >= 3) {
-                        Set set = new Set(SETS.size() + 1, "run", run);
-                        SETS.add(set);
+                        Set set = new Set(sets.size() + 1, "run", run);
+                        sets.add(set);
                         putJokersInSet("run", run);
                     }
                 }
             }
         }
 
-//        for (Set set : SETS) {
+        // Debugging: print each set's info
+//        for (Set set : sets) {
 //            set.print();
 //        }
 
         // Create players
-        for (int i = 0; i < Main.PLAYER_TYPES.length; i++) {
-            int id = PLAYERS.size() + 1;
-            String playerType = Main.PLAYER_TYPES[i];
-            String objectiveFunction = Main.OBJECTIVE_FUNCTIONS[i];
+        for (int i = 0; i < playerTypes.length; i++) {
+            int id = players.size() + 1;
+            String playerType = playerTypes[i];
+            String objectiveFunction = objectiveFunctions[i];
 
             switch (playerType) {
-                case "random" -> PLAYERS.add(new RandomPlayer(id, objectiveFunction));
-                case "greedy" -> PLAYERS.add(new GreedyPlayer(id, objectiveFunction));
-                case "ilp" -> PLAYERS.add(new IntegerLinearProgramming(id, objectiveFunction));
-                case "alphabeta" -> PLAYERS.add(new AlphaBetaPlayer(id, objectiveFunction));
+                case "greedy" -> players.add(new GreedyPlayer(id, objectiveFunction));
+                case "alphabeta" -> players.add(new AlphaBetaPlayer(id, objectiveFunction));
+                case "ilp" -> players.add(new IntegerLinearProgramming(id, objectiveFunction));
                 default -> {
                     System.out.println("Error: invalid player type \"" + playerType + "\"");
                     System.exit(0);
@@ -113,22 +154,23 @@ public class Game extends Thread {
         // Create initial GameState
         LinkedHashMap<Player, List<Tile>> racks = new LinkedHashMap<>();
         LinkedHashMap<Set, List<List<Tile>>> table = new LinkedHashMap<>();
-        List<Tile> pool = new ArrayList<>(List.copyOf(TILES));
+        List<Tile> pool = new ArrayList<>(List.copyOf(tiles));
         Collections.shuffle(pool);
 
-        for (Player player : PLAYERS) {
+        for (Player player : players) {
             racks.put(player, new ArrayList<>());
         }
 
         // Randomly give each player fourteen tiles
         for (int i = 0; i < 14; i++) {
-            for (Player player : PLAYERS) {
+            for (Player player : players) {
                 int randomIndex = (int) (Math.random() * pool.size());
                 racks.get(player).add(pool.remove(randomIndex));
             }
         }
 
         // Force a setup
+        // NOTE: Disable for-loop above
 //        String player1CustomRack = "30 joker,30 joker,1 blue";
 //        String player2CustomRack = "1 black,1 red,1 orange";
 //
@@ -139,30 +181,32 @@ public class Game extends Thread {
 
         currentState = new GameState(racks, table, pool);
         currentState.printRacks();
-        currentState.visualize();
+        if (!experimenting) {
+            currentState.visualize();
+        }
     }
 
-    private void putJokersInSet(String type, List<Tile> tiles) {
-        Tile joker = TILES.get(TILES.size() - 2);
+    private void putJokersInSet(String type, List<Tile> tilesInSet) {
+        Tile joker = tiles.get(tiles.size() - 2);
 
-        for (int i = 0; i < tiles.size(); i++) {
-            List<Tile> tilesOneJoker = new ArrayList<>(List.copyOf(tiles));
+        for (int i = 0; i < tilesInSet.size(); i++) {
+            List<Tile> tilesOneJoker = new ArrayList<>(List.copyOf(tilesInSet));
             tilesOneJoker.set(i, joker);
-            Set jokerSet = new Set(SETS.size() + 1, type, tilesOneJoker);
-            SETS.add(jokerSet);
+            Set jokerSet = new Set(sets.size() + 1, type, tilesOneJoker);
+            sets.add(jokerSet);
 
-            for (int j = i + 1; j < tiles.size(); j++) {
+            for (int j = i + 1; j < tilesInSet.size(); j++) {
                 List<Tile> tilesTwoJokers = new ArrayList<>(List.copyOf(tilesOneJoker));
                 tilesTwoJokers.set(j, joker);
-                jokerSet = new Set(SETS.size() + 1, type, tilesTwoJokers);
-                SETS.add(jokerSet);
+                jokerSet = new Set(sets.size() + 1, type, tilesTwoJokers);
+                sets.add(jokerSet);
             }
         }
     }
 
     private void customSetup(List<String> customRacks, LinkedHashMap<Player, List<Tile>> racks, List<Tile> pool) {
         for (int i = 0; i < customRacks.size(); i++) {
-            Player player = PLAYERS.get(i);
+            Player player = players.get(i);
             String customRack = customRacks.get(i);
 
             String[] tiles = customRack.split(",");
@@ -172,7 +216,7 @@ public class Game extends Thread {
                 String tileColour = attributes[1];
 
                 for (Tile poolTile : pool) {
-                    if (poolTile.getNUMBER() == tileNumber && poolTile.getCOLOUR().equals(tileColour)) {
+                    if (poolTile.getNumber() == tileNumber && poolTile.getColour().equals(tileColour)) {
                         racks.get(player).add(poolTile);
                         pool.remove(poolTile);
                         break;
@@ -190,22 +234,22 @@ public class Game extends Thread {
             turnCounter++;
             System.out.println("\n--- TURN #" + turnCounter + " ---");
 
-            for (Player player : PLAYERS) {
+            for (Player player : players) {
                 player.unstuck();
 
-                System.out.println("/ Player #" + player.getID() + " (" + player.getName() + " w/ " + player.getObjectiveFunction() + ") \\");
+                System.out.println("/ Player #" + player.getId() + " (" + player.getName() + " w/ " + player.getObjectiveFunction() + ") \\");
                 long startTime = System.currentTimeMillis();
                 GameState newState = player.makeMove(currentState);
                 long endTime = System.currentTimeMillis();
 
                 // If the player cannot make a move, draw a tile from the pool (if possible)
                 if (newState == currentState) {
-                    if (currentState.getPOOL().size() >= 1) {
+                    if (currentState.getPool().size() >= 1) {
                         newState = currentState.createChild();
                         newState.drawTileFromPool(player);
                     }
                     else {
-                        System.out.println("Player #" + player.getID() + " is unable to make a move\n");
+                        System.out.println("Player #" + player.getId() + " is unable to make a move\n");
                         player.stuck();
                     }
                 }
@@ -218,11 +262,13 @@ public class Game extends Thread {
                         System.out.println("Move score: " + score);
                     }
                     System.out.println("Time needed (ms): " + (endTime - startTime) + "\n");
-                    newState.visualize();
+                    if (!experimenting) {
+                        newState.visualize();
+                    }
 
-                    PREVIOUS_STATES.add(currentState);
+                    previousStates.add(currentState);
                     currentState = newState;
-                    currentState.setDepth(1);
+                    currentState.setDepth(0);
 
                     if (player.checkWin(currentState)) {
                         // Player has empty rack --> wins
@@ -231,10 +277,14 @@ public class Game extends Thread {
                     }
                 }
 
-                // Delay between players making moves
-                int counter = 0;
-                while (counter < 100000000) {
-                    counter++;
+                if (!experimenting) {
+                    // Delay between players making moves
+                    long startDelay = System.currentTimeMillis();
+                    while (true) {
+                        if (System.currentTimeMillis() - startDelay < 500) {
+                            break;
+                        }
+                    }
                 }
             }
 
@@ -242,13 +292,13 @@ public class Game extends Thread {
             boolean allStuck = true;
             List<Player> playersWithSmallestRackSize = new ArrayList<>();
             int smallestRackSize = Integer.MAX_VALUE;
-            for (Player player : PLAYERS) {
+            for (Player player : players) {
                 if (!player.isStuck()) {
                     allStuck = false;
                     break;
                 }
                 else {
-                    int playerRackSize = currentState.getRACKS().get(player).size();
+                    int playerRackSize = currentState.getRacks().get(player).size();
                     if (playerRackSize < smallestRackSize) {
                         playersWithSmallestRackSize = new ArrayList<>();
                         playersWithSmallestRackSize.add(player);
@@ -269,12 +319,12 @@ public class Game extends Thread {
 
         if (winners.size() == 1) {
             Player winner = winners.get(0);
-            System.out.println("Player #" + winner.getID() + " (" + winner.getName() + " w/ " + winner.getObjectiveFunction() + ") wins!");
+            System.out.println("Player #" + winner.getId() + " (" + winner.getName() + " w/ " + winner.getObjectiveFunction() + ") wins!");
         }
         else {
             System.out.println("It's a tie!\nWinners:");
             for (Player winner : winners) {
-                System.out.println("- Player #" + winner.getID() + " (" + winner.getName() + " w/ " + winner.getObjectiveFunction() + ")");
+                System.out.println("- Player #" + winner.getId() + " (" + winner.getName() + " w/ " + winner.getObjectiveFunction() + ")");
             }
         }
     }
@@ -282,17 +332,17 @@ public class Game extends Thread {
     public static Player nextPlayer(Player currentPlayer) {
         Player nextPlayer = null;
 
-        for (int i = 0; i < PLAYERS.size(); i++) {
-            Player player = PLAYERS.get(i);
+        for (int i = 0; i < players.size(); i++) {
+            Player player = players.get(i);
 
             if (player == currentPlayer) {
-                if (i + 1 < PLAYERS.size()) {
+                if (i + 1 < players.size()) {
                     // List goes on --> next player is next entry in list
-                    nextPlayer = PLAYERS.get(i + 1);
+                    nextPlayer = players.get(i + 1);
                 }
                 else {
                     // Reached end of list --> next player is first entry in list
-                    nextPlayer = PLAYERS.get(0);
+                    nextPlayer = players.get(0);
                 }
                 break;
             }

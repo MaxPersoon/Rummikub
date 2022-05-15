@@ -6,7 +6,7 @@ public interface Player {
 
     String getName();
 
-    int getID();
+    int getId();
 
     String getObjectiveFunction();
 

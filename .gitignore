@@ -75,3 +75,6 @@ out/production/Rummikub/Players/AlphaBetaPlayer.class
 out/production/Rummikub/Utilities/AlphaBetaTreeNode.class
 out/production/Rummikub/Utilities/Mergesort.class
 out/production/Rummikub/tiles/joker.png
+out/production/Rummikub/Experiments/experiment1.class
+out/production/Rummikub/Experiments/experiment2.class
+out/production/Rummikub/Experiments/experiment3.class

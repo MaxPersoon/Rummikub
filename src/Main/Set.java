@@ -5,41 +5,41 @@ import java.util.List;
 
 public class Set {
 
-    private final int ID;
-    private final String TYPE; // "group" or "run"
-    private final List<List<Tile>> TILES;
+    private final int id;
+    private final String type; // "group" or "run"
+    private final List<List<Tile>> tiles;
 
-    public Set(int id, String type, List<Tile> tiles) {
-        this.ID = id;
-        this.TYPE = type;
-        TILES = new ArrayList<>();
-        for (Tile tile : tiles) {
+    public Set(int id, String type, List<Tile> tilesInSet) {
+        this.id = id;
+        this.type = type;
+        this.tiles = new ArrayList<>();
+        for (Tile tile : tilesInSet) {
             List<Tile> copies = new ArrayList<>();
             copies.add(tile);
-            copies.add(Game.TILES.get(tile.getID()));
-            TILES.add(copies);
+            copies.add(Game.tiles.get(tile.getId()));
+            this.tiles.add(copies);
             for (Tile copy : copies) {
                 copy.addSet(this);
             }
         }
     }
 
-    public int getID() {
-        return ID;
+    public int getId() {
+        return id;
     }
 
-    public String getTYPE() {
-        return TYPE;
+    public String getType() {
+        return type;
     }
 
-    public List<List<Tile>> getTILES() {
-        return TILES;
+    public List<List<Tile>> getTiles() {
+        return tiles;
     }
 
     public List<Tile> isExactMatch(List<Tile> tilesToCheck) {
         List<Tile> tilesInSet = new ArrayList<>();
 
-        if (tilesToCheck.size() == TILES.size()) {
+        if (tilesToCheck.size() == tiles.size()) {
             tilesInSet = checkMatchingTiles(tilesToCheck);
         }
 
@@ -51,7 +51,7 @@ public class Set {
         // If not drawable, returns an empty list
         List<Tile> tilesInSet = new ArrayList<>();
 
-        if (rack.size() >= TILES.size()) {
+        if (rack.size() >= tiles.size()) {
             tilesInSet = checkMatchingTiles(rack);
         }
 
@@ -64,7 +64,7 @@ public class Set {
         List<Tile> tilesInSet = new ArrayList<>();
 
         List<Tile> remainingTiles = new ArrayList<>(List.copyOf(tilesToCheck));
-        for (List<Tile> copies : TILES) {
+        for (List<Tile> copies : tiles) {
             boolean copyFound = false;
 
             for (Tile copy : copies) {
@@ -86,54 +86,54 @@ public class Set {
     }
 
     public boolean isExpandingTile(Tile tileToCheck) {
-        if (TYPE.equals("group")) {
-            if (TILES.size() == 3) {
-                if (tileToCheck.getCOLOUR().equals("joker")) {
+        if (type.equals("group")) {
+            if (tiles.size() == 3) {
+                if (tileToCheck.getColour().equals("joker")) {
                     return true;
                 }
 
                 int tileNumber = 0;
-                for (List<Tile> copies : TILES) {
+                for (List<Tile> copies : tiles) {
                     Tile copy = copies.get(0);
-                    String copyColour = copy.getCOLOUR();
+                    String copyColour = copy.getColour();
 
                     if (!copyColour.equals("joker")) {
-                        tileNumber = copy.getNUMBER();
-                        if (tileToCheck.getCOLOUR().equals(copyColour)) {
+                        tileNumber = copy.getNumber();
+                        if (tileToCheck.getColour().equals(copyColour)) {
                             return false;
                         }
                     }
                 }
 
-                return tileToCheck.getNUMBER() == tileNumber;
+                return tileToCheck.getNumber() == tileNumber;
             }
         } else {
             // run
-            if (TILES.size() < 13) {
-                if (tileToCheck.getCOLOUR().equals("joker")) {
+            if (tiles.size() < 13) {
+                if (tileToCheck.getColour().equals("joker")) {
                     return true;
                 }
 
                 int firstTileNumber = 0;
                 int lastTileNumber = 0;
-                for (int i = 0; i < TILES.size(); i++) {
-                    Tile copy = TILES.get(i).get(0);
-                    String copyColour = copy.getCOLOUR();
+                for (int i = 0; i < tiles.size(); i++) {
+                    Tile copy = tiles.get(i).get(0);
+                    String copyColour = copy.getColour();
 
                     if (!copyColour.equals("joker")) {
-                        if (!tileToCheck.getCOLOUR().equals(copyColour)) {
+                        if (!tileToCheck.getColour().equals(copyColour)) {
                             return false;
                         }
 
-                        int copyNumber = copy.getNUMBER();
+                        int copyNumber = copy.getNumber();
                         firstTileNumber = copyNumber - i;
-                        lastTileNumber = copyNumber + (TILES.size() - 1 - i);
+                        lastTileNumber = copyNumber + (tiles.size() - 1 - i);
 
                         break;
                     }
                 }
 
-                return tileToCheck.getNUMBER() == firstTileNumber - 1 || tileToCheck.getNUMBER() == lastTileNumber + 1;
+                return tileToCheck.getNumber() == firstTileNumber - 1 || tileToCheck.getNumber() == lastTileNumber + 1;
             }
         }
 
@@ -142,35 +142,35 @@ public class Set {
 
     public void print() {
         StringBuilder text = new StringBuilder();
-        for (List<Tile> allCopies : TILES) {
-            Tile copy1 = allCopies.get(0);
+        for (List<Tile> copies : tiles) {
+            Tile copy = copies.get(0);
             if (!text.isEmpty()) {
                 text.append(" | ");
             }
-            text.append(copy1.getNUMBER() + ", " + copy1.getCOLOUR());
+            text.append(copy.getNumber()).append(", ").append(copy.getColour());
         }
-        System.out.println("Set #" + this.ID + ": " + text);
+        System.out.println("Set #" + this.id + ": " + text);
     }
 
     public void printAllCopies() {
         StringBuilder text = new StringBuilder();
-        for (List<Tile> allCopies : TILES) {
+        for (List<Tile> copies : tiles) {
             StringBuilder subtext = new StringBuilder();
-            for (Tile copy : allCopies) {
+            for (Tile copy : copies) {
                 if (subtext.isEmpty()) {
                     subtext.append("(1st) ");
                 }
                 else {
                     subtext.append(" (2nd) ");
                 }
-                subtext.append(copy.getNUMBER() + ", " + copy.getCOLOUR());
+                subtext.append(copy.getNumber()).append(", ").append(copy.getColour());
             }
             if (!text.isEmpty()) {
                 text.append(" | ");
             }
             text.append(subtext);
         }
-        System.out.println("Set #" + this.ID + ": " + text);
+        System.out.println("Set #" + this.id + ": " + text);
     }
 
 }

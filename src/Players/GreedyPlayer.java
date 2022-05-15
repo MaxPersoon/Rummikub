@@ -1,17 +1,18 @@
 package Players;
 
+import Main.Game;
 import Main.GameState;
 
 import java.util.List;
 
 public class GreedyPlayer implements Player {
 
-    private final int ID;
+    private final int id;
     private final String objectiveFunction;
     private boolean stuck;
 
     public GreedyPlayer(int id, String objectiveFunction) {
-        this.ID = id;
+        this.id = id;
         this.objectiveFunction = objectiveFunction;
         this.stuck = false;
     }
@@ -20,8 +21,8 @@ public class GreedyPlayer implements Player {
         return "Greedy";
     }
 
-    public int getID() {
-        return ID;
+    public int getId() {
+        return id;
     }
 
     public String getObjectiveFunction() {
@@ -41,7 +42,7 @@ public class GreedyPlayer implements Player {
     }
 
     public GameState makeMove(GameState currentState) {
-        List<GameState> moves = currentState.getMoves(this, this, objectiveFunction, 500, 50);
+        List<GameState> moves = currentState.getMoves(this, this, objectiveFunction, 50, Game.maximumMoveTime);
 
         if (moves.size() >= 1) {
             // Returns the state with the highest score
@@ -65,7 +66,7 @@ public class GreedyPlayer implements Player {
     }
 
     public boolean checkWin(GameState state) {
-        return state.getRACKS().get(this).size() == 0;
+        return state.getRacks().get(this).size() == 0;
     }
 
 }

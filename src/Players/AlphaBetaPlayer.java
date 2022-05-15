@@ -11,13 +11,14 @@ import java.util.List;
 public class AlphaBetaPlayer implements Player {
 
     private final static int maxDepth = 3;
+    private static long startTime;
 
-    private final int ID;
+    private final int id;
     private final String objectiveFunction;
     private boolean stuck;
 
     public AlphaBetaPlayer(int id, String objectiveFunction) {
-        this.ID = id;
+        this.id = id;
         this.objectiveFunction = objectiveFunction;
         this.stuck = false;
     }
@@ -26,8 +27,8 @@ public class AlphaBetaPlayer implements Player {
         return "AlphaBeta";
     }
 
-    public int getID() {
-        return ID;
+    public int getId() {
+        return id;
     }
 
     public String getObjectiveFunction() {
@@ -49,6 +50,7 @@ public class AlphaBetaPlayer implements Player {
     public GameState makeMove(GameState currentState) {
         AlphaBetaTreeNode root = new AlphaBetaTreeNode(currentState, this);
 
+        startTime = System.currentTimeMillis();
         AlphaBetaTreeNode bestNode = buildAndSearchTree(root, Double.NEGATIVE_INFINITY, Double.POSITIVE_INFINITY);
 
         // If necessary, backtrack the best node through the tree until a depth of 1 is reached
@@ -115,6 +117,10 @@ public class AlphaBetaPlayer implements Player {
     }
 
     private AlphaBetaTreeNode buildAndSearchTree(AlphaBetaTreeNode node, double alpha, double beta) {
+        if (System.currentTimeMillis() - startTime >= Game.maximumMoveTime) {
+            return node;
+        }
+
         if (node.getDepth() == maxDepth) {
             return node;
         }
@@ -169,7 +175,7 @@ public class AlphaBetaPlayer implements Player {
     }
 
     public boolean checkWin(GameState state) {
-        return state.getRACKS().get(this).size() == 0;
+        return state.getRacks().get(this).size() == 0;
     }
 
 }

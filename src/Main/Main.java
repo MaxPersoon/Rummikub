@@ -22,38 +22,25 @@ import java.util.List;
 
 public class Main extends Application {
 
-    public static final String[] PLAYER_TYPES = {"alphabeta", "alphabeta"};
-    // random
+    private static final String[] playerTypes = {"alphabeta", "alphabeta"};
     // greedy
-    // ilp
     // alphabeta
-    public static final String[] OBJECTIVE_FUNCTIONS = {"ttv", "ttv"};
+    // ilp
+    private static final String[] objectiveFunctions = {"ttv", "ttc"};
     // ttc = total tile count
     // ttv = total tile value
     // ttcwscm = total tile count with set change minimization
     // ttvwscm = total tile value with set change minimization
-    public static final LinkedHashMap<Integer, List<double[]>> COORDINATES_RACKS = new LinkedHashMap<>(); // maps playerIDs to list of coordinates
-    public static final List<List<double[]>> COORDINATES_TABLE = new ArrayList<>(); // each entry is a list of coordinates forming a set
+    public static final LinkedHashMap<Integer, List<double[]>> coordinatesRacks = new LinkedHashMap<>(); // maps playerIDs to list of coordinates
+    public static final List<List<double[]>> coordinatesTable = new ArrayList<>(); // each entry is a list of coordinates forming a set
 
     public static void main(String[] args) {
-        int numberOfPlayers = PLAYER_TYPES.length;
-        int numberOfObjectiveFunctions = OBJECTIVE_FUNCTIONS.length;
-
-        if (numberOfPlayers < 2 || numberOfPlayers > 4) {
-            System.out.println("Error: incorrect number of players");
-            System.exit(0);
-        }
-
-        if (numberOfPlayers != numberOfObjectiveFunctions) {
-            System.out.println("Error: incorrect number of objective functions (" + numberOfObjectiveFunctions + " instead of " + numberOfPlayers + ")");
-            System.exit(0);
-        }
-
         launch(args);
     }
 
     @Override
     public void start(Stage stage) throws Exception {
+        // Setup visualization
         Group root = new Group();
         ObservableList<Node> nodes = root.getChildren();
         List<Node> nodesToPassThrough = new ArrayList<>();
@@ -95,25 +82,26 @@ public class Main extends Application {
 
         // Racks
         // Create a rack for each player
-        for (int i = 0; i < PLAYER_TYPES.length; i++) {
+        for (int i = 0; i < playerTypes.length; i++) {
             Rectangle rack = new Rectangle(RACK_STARTS.get(i)[0], RACK_STARTS.get(i)[1], RACK_WIDTH, RACK_HEIGHT);
             rack.setFill(Color.BROWN);
             nodes.add(rack);
-            COORDINATES_RACKS.put(i + 1, new ArrayList<>());
+            coordinatesRacks.put(i + 1, new ArrayList<>());
         }
 
         // Generate coordinates of tiles in each rack
         for (int rowIndex = 0; rowIndex < 2; rowIndex++) {
             for (int columnIndex = 0; columnIndex < 12; columnIndex++) {
-                for (int i = 0; i < PLAYER_TYPES.length; i++) {
+                for (int i = 0; i < playerTypes.length; i++) {
                     double startX = RACK_STARTS.get(i)[0] + TILE_OFFSET + columnIndex * (TILE_OFFSET + TILE_WIDTH);
                     double startY = RACK_STARTS.get(i)[1] + TILE_OFFSET + rowIndex * (TILE_OFFSET + TILE_HEIGHT);
                     double[] coordinate = {startX, startY};
-                    COORDINATES_RACKS.get(i + 1).add(coordinate);
+                    coordinatesRacks.get(i + 1).add(coordinate);
                 }
             }
         }
 
+        // Debugging: print coordinates of tiles in each rack
 //        for (int playerID : COORDINATES_RACKS.keySet()) {
 //            System.out.println("Coordinates rack #" + playerID + ":");
 //            for (double[] coordinate : COORDINATES_RACKS.get(playerID)) {
@@ -126,6 +114,8 @@ public class Main extends Application {
         Rectangle table = new Rectangle(TABLE_START[0], TABLE_START[1], TABLE_WIDTH, TABLE_HEIGHT);
         table.setFill(Color.PURPLE);
         nodes.add(table);
+
+        // Generate coordinates of sets on table
         List<double[]> coordinatesSet = new ArrayList<>();
         for (int rowIndex = 0; rowIndex < 12; rowIndex++) {
             for(int columnIndex = 0; columnIndex < 39; columnIndex++) {
@@ -136,13 +126,14 @@ public class Main extends Application {
                     coordinatesSet.add(coordinate);
 
                     if (coordinatesSet.size() == 13) {
-                        COORDINATES_TABLE.add(coordinatesSet);
+                        coordinatesTable.add(coordinatesSet);
                         coordinatesSet = new ArrayList<>();
                     }
                 }
             }
         }
 
+        // Debugging: print coordinates of sets on table
 //        System.out.println("Coordinates table:");
 //        int setCounter = 0;
 //        for (List<double[]> coordinatesSet_ : COORDINATES_TABLE) {
@@ -185,6 +176,10 @@ public class Main extends Application {
         stage.setScene(scene);
         stage.show();
 
+        // Launch the game
+        Game.playerTypes = playerTypes;
+        Game.objectiveFunctions = objectiveFunctions;
+        Game.experimenting = false;
         Game.nodes = nodesToPassThrough;
         Game game = new Game();
         game.start();

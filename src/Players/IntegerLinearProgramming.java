@@ -18,25 +18,25 @@ public class IntegerLinearProgramming implements Player {
     private static boolean nativeLibrariesLoaded = false;
     private static final boolean debug = false;
 
-    private final int ID;
+    private final int id;
     private final String objectiveFunction;
     private boolean stuck;
 
     public IntegerLinearProgramming(int id, String objectiveFunction) {
-        this.ID = id;
+        this.id = id;
         this.objectiveFunction = objectiveFunction;
         this.stuck = false;
 
         if (tileTypes.isEmpty()) {
-            for (int i = 0; i < Game.TILES.size(); i+=2) {
+            for (int i = 0; i < Game.tiles.size(); i+=2) {
                 List<Tile> tiles = new ArrayList<>();
-                tiles.add(Game.TILES.get(i));
-                tiles.add(Game.TILES.get(i + 1));
+                tiles.add(Game.tiles.get(i));
+                tiles.add(Game.tiles.get(i + 1));
                 tileTypes.put(tileTypes.size() + 1, tiles);
             }
 
-            for (int i = 0; i < Game.SETS.size(); i++) {
-                sets.put(sets.size() + 1, Game.SETS.get(i));
+            for (int i = 0; i < Game.sets.size(); i++) {
+                sets.put(sets.size() + 1, Game.sets.get(i));
             }
         }
 
@@ -50,8 +50,8 @@ public class IntegerLinearProgramming implements Player {
         return "ILP";
     }
 
-    public int getID() {
-        return ID;
+    public int getId() {
+        return id;
     }
 
     public String getObjectiveFunction() {
@@ -99,7 +99,7 @@ public class IntegerLinearProgramming implements Player {
                 int w_j = 0;
 
                 Set set = sets.get(j);
-                LinkedHashMap<Set, List<List<Tile>>> table = currentState.getTABLE();
+                LinkedHashMap<Set, List<List<Tile>>> table = currentState.getTable();
                 if (table.containsKey(set)) {
                     w_j = table.get(set).size();
                 }
@@ -117,7 +117,7 @@ public class IntegerLinearProgramming implements Player {
         }
 
         List<Tile> tilesOnTable = currentState.fetchTilesOnTable();
-        List<Tile> tilesOnRack = new ArrayList<>(List.copyOf(currentState.getRACKS().get(this)));
+        List<Tile> tilesOnRack = new ArrayList<>(List.copyOf(currentState.getRacks().get(this)));
         for (Integer i : tileTypes.keySet()) {
             List<Tile> copies = tileTypes.get(i);
             int t_i = 0;
@@ -143,7 +143,7 @@ public class IntegerLinearProgramming implements Player {
                 Set set = sets.get(j);
                 int s_ij = 0;
 
-                if (copies.get(0).getSETS().contains(set)) {
+                if (copies.get(0).getSets().contains(set)) {
                     s_ij = 1;
                     constraint2.setCoefficient(xValues.get(j - 1), 1);
                 }
@@ -157,7 +157,7 @@ public class IntegerLinearProgramming implements Player {
             yValues.add(y_i);
 
             if (objectiveFunction.contains("ttv")) {
-                vValues.add(copies.get(0).getNUMBER());
+                vValues.add(copies.get(0).getNumber());
             }
         }
 
@@ -217,7 +217,7 @@ public class IntegerLinearProgramming implements Player {
 
         // Convert to GameState
         GameState newState = currentState.createChild();
-        tilesOnRack = newState.getRACKS().get(this);
+        tilesOnRack = newState.getRacks().get(this);
         List<Tile> drawnTiles = new ArrayList<>();
         for (Integer i : tileTypes.keySet()) {
             List<Tile> copies = tileTypes.get(i);
@@ -249,8 +249,8 @@ public class IntegerLinearProgramming implements Player {
                 Set set = sets.get(j);
                 int differenceInNumber = (int) xValues.get(j - 1).solutionValue(); // x_j
 
-                if (currentState.getTABLE().containsKey(set)) {
-                    differenceInNumber -= currentState.getTABLE().get(set).size();
+                if (currentState.getTable().containsKey(set)) {
+                    differenceInNumber -= currentState.getTable().get(set).size();
                 }
 
                 if (differenceInNumber >= 1) {
@@ -265,7 +265,7 @@ public class IntegerLinearProgramming implements Player {
                 } else if (differenceInNumber <= -1) {
                     differenceInNumber = differenceInNumber * -1;
                     for (int a = 0; a < differenceInNumber; a++) {
-                        List<Tile> setInstance = newState.getTABLE().get(set).get(0);
+                        List<Tile> setInstance = newState.getTable().get(set).get(0);
                         drawnTiles.addAll(setInstance);
                         newState.removeSetInstance(set, setInstance);
 
@@ -301,7 +301,7 @@ public class IntegerLinearProgramming implements Player {
     }
 
     public boolean checkWin(GameState state) {
-        return state.getRACKS().get(this).size() == 0;
+        return state.getRacks().get(this).size() == 0;
     }
 
 }
