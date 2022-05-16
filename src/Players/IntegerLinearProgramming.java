@@ -13,8 +13,8 @@ import java.util.List;
 
 public class IntegerLinearProgramming implements Player {
 
-    private static final LinkedHashMap<Integer, List<Tile>> tileTypes = new LinkedHashMap<>(); // Maps index i to type of tile
-    private static final LinkedHashMap<Integer, Set> sets = new LinkedHashMap<>(); // Maps index j to set
+    public static final LinkedHashMap<Integer, List<Tile>> tileTypes = new LinkedHashMap<>(); // Maps index i to type of tile
+    public static final LinkedHashMap<Integer, Set> sets = new LinkedHashMap<>(); // Maps index j to set
     private static boolean nativeLibrariesLoaded = false;
     private static final boolean debug = false;
 

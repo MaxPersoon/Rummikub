@@ -1,5 +1,6 @@
 package Main;
 
+import Experiments.runExperiments;
 import Players.*;
 import javafx.scene.Node;
 import javafx.scene.image.ImageView;
@@ -241,6 +242,7 @@ public class Game extends Thread {
                 long startTime = System.currentTimeMillis();
                 GameState newState = player.makeMove(currentState);
                 long endTime = System.currentTimeMillis();
+                long computationTime = endTime - startTime;
 
                 // If the player cannot make a move, draw a tile from the pool (if possible)
                 if (newState == currentState) {
@@ -249,6 +251,7 @@ public class Game extends Thread {
                         newState.drawTileFromPool(player);
                     }
                     else {
+                        currentState.setScore(0);
                         System.out.println("Player #" + player.getId() + " is unable to make a move\n");
                         player.stuck();
                     }
@@ -261,7 +264,7 @@ public class Game extends Thread {
                     if (score > 0) {
                         System.out.println("Move score: " + score);
                     }
-                    System.out.println("Time needed (ms): " + (endTime - startTime) + "\n");
+                    System.out.println("Time needed (ms): " + computationTime + "\n");
                     if (!experimenting) {
                         newState.visualize();
                     }
@@ -269,12 +272,16 @@ public class Game extends Thread {
                     previousStates.add(currentState);
                     currentState = newState;
                     currentState.setDepth(0);
+                }
 
-                    if (player.checkWin(currentState)) {
-                        // Player has empty rack --> wins
-                        winners.add(player);
-                        break;
-                    }
+                if (experimenting) {
+                    runExperiments.writeMoveToFile(turnCounter, player.getName(), player.getObjectiveFunction(), currentState.getScore(), computationTime);
+                }
+
+                if (player.checkWin(currentState)) {
+                    // Player has empty rack --> wins
+                    winners.add(player);
+                    break;
                 }
 
                 if (!experimenting) {
@@ -316,6 +323,8 @@ public class Game extends Thread {
                 break;
             }
         }
+
+        runExperiments.writeWinnersToFile(winners);
 
         if (winners.size() == 1) {
             Player winner = winners.get(0);
