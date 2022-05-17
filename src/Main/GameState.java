@@ -148,21 +148,35 @@ public class GameState {
         List<Tile> currentPlayerRack = currentState.getRacks().get(player);
         List<Tile> potentialPlayerRack = racks.get(player);
 
-        if (objectiveFunction.equals("ttc")) {
+        if (objectiveFunction.contains("ttc")) {
             // total tile count
             score = Math.max(0, currentPlayerRack.size() - potentialPlayerRack.size());
-        }
-        else if (objectiveFunction.equals("ttv")) {
+        } else if (objectiveFunction.contains("ttv")) {
             // total tile value
             for (Tile tile : currentPlayerRack) {
                 if (!potentialPlayerRack.contains(tile)) {
                     score += tile.getNumber();
                 }
             }
-        }
-        else {
+        } else {
             System.out.println("Error: invalid objective function \"" + objectiveFunction + "\"");
             System.exit(0);
+        }
+
+        if (objectiveFunction.contains("wscm")) {
+            double M = 40;
+
+            java.util.Set<Set> setsOldSolution = currentState.table.keySet();
+            java.util.Set<Set> setsNewSolution = table.keySet();
+
+            for (Set set : setsNewSolution) {
+                if (setsOldSolution.contains(set)) {
+                    double setCounterOldSolution = currentState.table.get(set).size();
+                    double setCounterNewSolution = table.get(set).size();
+
+                    score += Math.min(setCounterOldSolution, setCounterNewSolution) / M;
+                }
+            }
         }
     }
 

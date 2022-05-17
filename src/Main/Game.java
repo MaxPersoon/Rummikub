@@ -324,7 +324,9 @@ public class Game extends Thread {
             }
         }
 
-        runExperiments.writeWinnersToFile(winners);
+        if (experimenting) {
+            runExperiments.writeWinnersToFile(winners);
+        }
 
         if (winners.size() == 1) {
             Player winner = winners.get(0);

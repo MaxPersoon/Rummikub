@@ -76,3 +76,5 @@ out/production/Rummikub/Utilities/Mergesort.class
 out/production/Rummikub/tiles/joker.png
 .idea/uiDesigner.xml
 out/production/Rummikub/Experiments/runExperiments.class
+out/production/Rummikub/Experiments/data/1-moves.csv
+out/production/Rummikub/Experiments/data/1-winners.csv

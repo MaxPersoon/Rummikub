@@ -22,11 +22,11 @@ import java.util.List;
 
 public class Main extends Application {
 
-    private static final String[] playerTypes = {"alphabeta", "alphabeta"};
+    private static final String[] playerTypes = {"greedy", "greedy"};
     // greedy
     // alphabeta
     // ilp
-    private static final String[] objectiveFunctions = {"ttv", "ttc"};
+    private static final String[] objectiveFunctions = {"ttc", "ttcwscm"};
     // ttc = total tile count
     // ttv = total tile value
     // ttcwscm = total tile count with set change minimization
