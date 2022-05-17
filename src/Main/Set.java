@@ -8,8 +8,9 @@ public class Set {
     private final int id;
     private final String type; // "group" or "run"
     private final List<List<Tile>> tiles;
+    private final String signature;
 
-    public Set(int id, String type, List<Tile> tilesInSet) {
+    public Set(int id, String type, List<Tile> tilesInSet, String signature) {
         this.id = id;
         this.type = type;
         this.tiles = new ArrayList<>();
@@ -22,6 +23,7 @@ public class Set {
                 copy.addSet(this);
             }
         }
+        this.signature = signature;
     }
 
     public int getId() {
@@ -34,6 +36,10 @@ public class Set {
 
     public List<List<Tile>> getTiles() {
         return tiles;
+    }
+
+    public String getSignature() {
+        return signature;
     }
 
     public List<Tile> isExactMatch(List<Tile> tilesToCheck) {

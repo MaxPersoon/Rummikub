@@ -12,7 +12,7 @@ import java.util.List;
 public class runExperiments {
 
     private static final String fileName = "1";
-    private static final int numberOfGamesPerCombo = 10;
+    private static final int numberOfGamesPerCombo = 100;
 
     private static FileWriter fileWriterMove;
     private static FileWriter fileWriterWinners;
@@ -40,14 +40,14 @@ public class runExperiments {
                 System.exit(0);
             }
 
-            fileWriterMove.write("gameCounter,turnCounter,optimisationTechnique,objectiveFunction,score,computationTime\n");
-            fileWriterWinners.write("gameCounter,winners\n");
+            fileWriterMove.write("gameID,optimisationTechnique,objectiveFunction,score,computationTime\n");
+            fileWriterWinners.write("gameID,winners\n");
         } catch (IOException e) {
             e.printStackTrace();
             System.exit(0);
         }
 
-        final String[] allPlayerTypes = {"ilp"};
+        final String[] allPlayerTypes = {"greedy", "alphabeta", "ilp"};
         final String[] allObjectiveFunctions = {"ttc", "ttv", "ttcwscm", "ttvwscm"};
 
         String[] playerTypes = new String[2];
@@ -112,8 +112,8 @@ public class runExperiments {
         }
     }
 
-    public static void writeMoveToFile(int turnCounter, String optimisationTechnique, String objectiveFunction, double score, long computationTime) {
-        String entry = gameCounter + "," + turnCounter + "," + optimisationTechnique + "," + objectiveFunction + "," + score + "," + computationTime + "\n";
+    public static void writeMoveToFile(String optimisationTechnique, String objectiveFunction, double score, long computationTime) {
+        String entry = gameCounter + "," + optimisationTechnique + "," + objectiveFunction + "," + score + "," + computationTime + "\n";
         try {
             fileWriterMove.write(entry);
         } catch (IOException e) {

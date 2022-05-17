@@ -82,7 +82,7 @@ public class IntegerLinearProgramming implements Player {
         List<MPVariable> zValues = new ArrayList<>();
         List<MPVariable> yValues = new ArrayList<>();
 
-        // s_ij (p): indicates whether tile i is in set j (yes = 1, no = 0)
+        // s_ij (p): tile i occurs 0, 1 or 2 times in set j (non-joker: maximum of 1)
         // w_j (p): set j is 0, 1 or 2 times on the table
         // t_i (p): tile i is 0, 1 or 2 times on the table
         // r_i (p): tile i is 0, 1 or 2 times on the player's rack
@@ -143,11 +143,24 @@ public class IntegerLinearProgramming implements Player {
                 Set set = sets.get(j);
                 int s_ij = 0;
 
-                if (copies.get(0).getSets().contains(set)) {
-                    s_ij = 1;
-                    constraint2.setCoefficient(xValues.get(j - 1), 1);
+                if (i == 53) {
+                    // Joker
+                    for (List<Tile> copies_ : set.getTiles()) {
+                        Tile copy = copies_.get(0);
+                        if (copy.getColour().equals("joker")) {
+                            s_ij++;
+                        }
+                    }
+                } else {
+                    // Non-joker
+                    if (copies.get(0).getSets().contains(set)) {
+                        s_ij = 1;
+                    }
                 }
 
+                if (s_ij >= 1) {
+                    constraint2.setCoefficient(xValues.get(j - 1), s_ij);
+                }
                 sValues.add(s_ij);
             }
             constraint2.setCoefficient(y_i, -1);

@@ -97,8 +97,7 @@ public class Game extends Thread {
             List<Tile> tilesWithSpecificNumber = tilesWithNumber.get(i);
 
             // Size 4
-            Set set = new Set(sets.size() + 1, "group", tilesWithSpecificNumber);
-            sets.add(set);
+            addNewSet("group", tilesWithSpecificNumber);
             putJokersInSet("group", tilesWithSpecificNumber);
 
             // Size 3
@@ -106,8 +105,7 @@ public class Game extends Thread {
                 List<Tile> tilesWithSpecificNumberCopy = new ArrayList<>(List.copyOf(tilesWithSpecificNumber));
                 tilesWithSpecificNumberCopy.remove(tile);
 
-                set = new Set(sets.size() + 1, "group", tilesWithSpecificNumberCopy);
-                sets.add(set);
+                addNewSet("group", tilesWithSpecificNumberCopy);
                 putJokersInSet("group", tilesWithSpecificNumberCopy);
             }
         }
@@ -122,8 +120,7 @@ public class Game extends Thread {
                 for (Tile tile : tilesWithSpecificColour) {
                     run.add(tile);
                     if (run.size() >= 3) {
-                        Set set = new Set(sets.size() + 1, "run", run);
-                        sets.add(set);
+                        addNewSet("run", run);
                         putJokersInSet("run", run);
                     }
                 }
@@ -187,20 +184,42 @@ public class Game extends Thread {
         }
     }
 
+    private void addNewSet(String type, List<Tile> tiles) {
+        StringBuilder signatureBuilder = new StringBuilder();
+        for (Tile tile : tiles) {
+            if (!signatureBuilder.isEmpty()) {
+                signatureBuilder.append(";");
+            }
+            signatureBuilder.append(tile.getNumber()).append(",").append(tile.getColour());
+        }
+        String signature = signatureBuilder.toString();
+
+        boolean duplicate = false;
+        for (Set set : sets) {
+            if (set.getSignature().equals(signature)) {
+                // Duplicate set
+                duplicate = true;
+                break;
+            }
+        }
+
+        if (!duplicate) {
+            sets.add(new Set(sets.size() + 1, type, tiles, signature));
+        }
+    }
+
     private void putJokersInSet(String type, List<Tile> tilesInSet) {
         Tile joker = tiles.get(tiles.size() - 2);
 
         for (int i = 0; i < tilesInSet.size(); i++) {
             List<Tile> tilesOneJoker = new ArrayList<>(List.copyOf(tilesInSet));
             tilesOneJoker.set(i, joker);
-            Set jokerSet = new Set(sets.size() + 1, type, tilesOneJoker);
-            sets.add(jokerSet);
+            addNewSet(type, tilesOneJoker);
 
             for (int j = i + 1; j < tilesInSet.size(); j++) {
                 List<Tile> tilesTwoJokers = new ArrayList<>(List.copyOf(tilesOneJoker));
                 tilesTwoJokers.set(j, joker);
-                jokerSet = new Set(sets.size() + 1, type, tilesTwoJokers);
-                sets.add(jokerSet);
+                addNewSet(type, tilesTwoJokers);
             }
         }
     }
@@ -275,7 +294,7 @@ public class Game extends Thread {
                 }
 
                 if (experimenting) {
-                    runExperiments.writeMoveToFile(turnCounter, player.getName(), player.getObjectiveFunction(), currentState.getScore(), computationTime);
+                    runExperiments.writeMoveToFile(player.getName(), player.getObjectiveFunction(), currentState.getScore(), computationTime);
                 }
 
                 if (player.checkWin(currentState)) {
