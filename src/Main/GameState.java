@@ -31,14 +31,18 @@ public class GameState {
         generateId();
     }
 
-    public GameState(GameState parent, LinkedHashMap<Player, List<Tile>> racks, LinkedHashMap<Set, List<List<Tile>>>  table, List<Tile> pool) {
+    public GameState(GameState parent) {
         this.id = "";
         this.depth = parent.depth + 1;
         this.score = 0;
         this.parent = parent;
-        this.racks = racks;
-        this.table = table;
-        this.pool = pool;
+        this.racks = new LinkedHashMap<>(parent.racks);
+        for (Player player : racks.keySet()) {
+            racks.replace(player, new ArrayList<>(List.copyOf(racks.get(player))));
+        }
+        this.table = new LinkedHashMap<>(parent.table);
+        table.replaceAll((s, v) -> new ArrayList<>(List.copyOf(table.get(s))));
+        this.pool = new ArrayList<>(List.copyOf(parent.pool));
     }
 
     public String getId() {
@@ -231,39 +235,9 @@ public class GameState {
         return moves;
     }
 
-    public void drawTileFromPool(Player player) {
-        Tile tileFromPool = pool.remove(0);
-        racks.get(player).add(tileFromPool);
-        generateId();
-        System.out.println("Draws {" + tileFromPool.getNumber() + ", " + tileFromPool.getColour() + "} from the pool");
-    }
-
     private void recursivelyEnumerateMoves(Player player, List<GameState> moves, List<GameState> movesAndDummy) {
         if (depth < maximumDepth && (System.currentTimeMillis() - startTime) < maximumTime) {
             List<Tile> playerRack = this.racks.get(player);
-
-            // Draw set from rack on table
-            for (Set set : Game.sets) {
-                List<Tile> tilesToRemove = set.drawableFromRack(playerRack);
-
-                if (!tilesToRemove.isEmpty()) {
-                    // Perform move
-                    GameState move = createChild();
-
-                    move.racks.get(player).removeAll(tilesToRemove);
-                    move.addSetInstance(set, tilesToRemove);
-
-                    if (move.isWorthExploring(movesAndDummy)) {
-                        moves.add(move);
-                        move.recursivelyEnumerateMoves(player, moves, movesAndDummy);
-                    }
-                }
-
-                // Time limit check
-                if (System.currentTimeMillis() - startTime >= maximumTime) {
-                    return;
-                }
-            }
 
             // Replace joker tiles on table with equivalent tiles from rack
             for (Set set : table.keySet()) {
@@ -308,18 +282,16 @@ public class GameState {
                             for (String tileColour : tileColours) {
                                 if (tile_.getColour().equals(tileColour) && tile_.getNumber() == tileNumber) {
                                     // Perform move
-                                    GameState dummy = createChild();
+                                    GameState dummy = new GameState(this);
 
-                                    dummy.racks.get(player).remove(tile_);
-                                    dummy.racks.get(player).add(tile);
-                                    LinkedHashMap<Set, List<Tile>> setInstances = new LinkedHashMap<>();
-                                    setInstances.put(set, setInstance);
                                     List<Tile> newSetInstance = new ArrayList<>(List.copyOf(setInstance));
                                     newSetInstance.remove(tile);
                                     newSetInstance.add(tile_);
-                                    List<List<Tile>> newSetInstances = new ArrayList<>();
-                                    newSetInstances.add(newSetInstance);
-                                    dummy.replaceSetInstances(setInstances, newSetInstances);
+
+                                    dummy.racks.get(player).remove(tile_);
+                                    dummy.racks.get(player).add(tile);
+                                    dummy.removeSetInstance(set, setInstance);
+                                    dummy.findAndAddCorrespondingSet(newSetInstance);
 
                                     if (dummy.isWorthExploring(movesAndDummy)) {
                                         dummy.recursivelyEnumerateMoves(player, moves, movesAndDummy);
@@ -327,8 +299,6 @@ public class GameState {
                                 }
                             }
                         }
-
-                        break;
                     }
 
                     // Time limit check
@@ -343,102 +313,20 @@ public class GameState {
                 }
             }
 
-            // Merge two runs to make a new run
-            for (Set set1 : table.keySet()) {
-                if (set1.getType().equals("run")) {
-                    for (Set set2 : table.keySet()) {
-                        if (set2.getType().equals("run") && set1 != set2) {
-                            List<Tile> set1Instance = table.get(set1).get(0);
-                            List<Tile> set2Instance = table.get(set2).get(0);
+            // Draw set from rack on table
+            for (Set set : Game.sets) {
+                List<Tile> setInstance = set.drawableFromRack(playerRack);
 
-                            String set1Colour = "";
-                            for (Tile tile : set1Instance) {
-                                String tileColour = tile.getColour();
-                                if (!tileColour.equals("joker")) {
-                                    set1Colour = tileColour;
-                                    break;
-                                }
-                            }
-
-                            String set2Colour = "";
-                            for (Tile tile : set2Instance) {
-                                String tileColour = tile.getColour();
-                                if (!tileColour.equals("joker")) {
-                                    set2Colour = tileColour;
-                                    break;
-                                }
-                            }
-
-                            if (set1Colour.equals(set2Colour)) {
-                                List<Tile> combination1 = new ArrayList<>();
-                                combination1.addAll(set1Instance);
-                                combination1.addAll(set2Instance);
-                                List<Tile> combination2 = new ArrayList<>();
-                                combination2.addAll(set2Instance);
-                                combination2.addAll(set1Instance);
-
-                                List<List<Tile>> combinations = new ArrayList<>();
-                                combinations.add(combination1);
-                                combinations.add(combination2);
-
-                                for (List<Tile> combination : combinations) {
-                                    if (isLegalMergedSet(combination)) {
-                                        // Perform move
-                                        GameState dummy = createChild();
-
-                                        LinkedHashMap<Set, List<Tile>> setInstances = new LinkedHashMap<>();
-                                        setInstances.put(set1, set1Instance);
-                                        setInstances.put(set2, set2Instance);
-                                        List<List<Tile>> newSetInstances = new ArrayList<>();
-                                        newSetInstances.add(combination);
-                                        dummy.replaceSetInstances(setInstances, newSetInstances);
-
-                                        if (dummy.isWorthExploring(movesAndDummy)) {
-                                            dummy.recursivelyEnumerateMoves(player, moves, movesAndDummy);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // Time limit check
-                        if (System.currentTimeMillis() - startTime >= maximumTime) {
-                            return;
-                        }
-                    }
-                }
-
-                // Time limit check
-                if (System.currentTimeMillis() - startTime >= maximumTime) {
-                    return;
-                }
-            }
-
-            // Split a run into two new runs
-            for (Set set : table.keySet()) {
-                if (set.getType().equals("run") && set.getTiles().size() >= 6) {
+                if (!setInstance.isEmpty()) {
                     // Perform move
-                    GameState dummy = createChild();
+                    GameState move = new GameState(this);
 
-                    List<Tile> setInstance = table.get(set).get(0);
-                    List<Tile> newSetInstance1 = new ArrayList<>();
-                    List<Tile> newSetInstance2 = new ArrayList<>();
-                    for (int i = 0; i < setInstance.size(); i++) {
-                        if (i < 3) {
-                            newSetInstance1.add(setInstance.get(i));
-                        } else {
-                            newSetInstance2.add(setInstance.get(i));
-                        }
-                    }
-                    LinkedHashMap<Set, List<Tile>> setInstances = new LinkedHashMap<>();
-                    setInstances.put(set, setInstance);
-                    List<List<Tile>> newSetInstances = new ArrayList<>();
-                    newSetInstances.add(newSetInstance1);
-                    newSetInstances.add(newSetInstance2);
-                    dummy.replaceSetInstances(setInstances, newSetInstances);
+                    move.racks.get(player).removeAll(setInstance);
+                    move.addSetInstance(set, setInstance);
 
-                    if (dummy.isWorthExploring(movesAndDummy)) {
-                        dummy.recursivelyEnumerateMoves(player, moves, movesAndDummy);
+                    if (move.isWorthExploring(movesAndDummy)) {
+                        moves.add(move);
+                        move.recursivelyEnumerateMoves(player, moves, movesAndDummy);
                     }
                 }
 
@@ -454,17 +342,15 @@ public class GameState {
                 for (Set set : table.keySet()) {
                     if (set.isExpandingTile(playerTile)) {
                         // Perform move
-                        GameState move = createChild();
+                        GameState move = new GameState(this);
 
-                        move.racks.get(player).remove(playerTile);
                         List<Tile> setInstance = table.get(set).get(0);
                         List<Tile> newSetInstance = new ArrayList<>(List.copyOf(setInstance));
                         newSetInstance.add(playerTile);
-                        LinkedHashMap<Set, List<Tile>> setInstances = new LinkedHashMap<>();
-                        setInstances.put(set, setInstance);
-                        List<List<Tile>> newSetInstances = new ArrayList<>();
-                        newSetInstances.add(newSetInstance);
-                        move.replaceSetInstances(setInstances, newSetInstances);
+
+                        move.racks.get(player).remove(playerTile);
+                        move.removeSetInstance(set, setInstance);
+                        move.findAndAddCorrespondingSet(newSetInstance);
 
                         if (move.isWorthExploring(movesAndDummy)) {
                             moves.add(move);
@@ -487,7 +373,7 @@ public class GameState {
             // Remove a fourth tile from a group
             // Remove the first and last tile from a run
             for (Set set : table.keySet()) {
-                if (set.getTiles().size() >= 4) {
+                if (set.getTiles().size() > 3) {
                     List<Tile> setInstance = table.get(set).get(0);
                     List<Tile> tilesToRemove = new ArrayList<>();
 
@@ -501,16 +387,14 @@ public class GameState {
 
                     for (Tile tile : tilesToRemove) {
                         // Perform move
-                        GameState dummy = createChild();
+                        GameState dummy = new GameState(this);
 
-                        dummy.racks.get(player).add(tile);
                         List<Tile> newSetInstance = new ArrayList<>(List.copyOf(setInstance));
                         newSetInstance.remove(tile);
-                        LinkedHashMap<Set, List<Tile>> setInstances = new LinkedHashMap<>();
-                        setInstances.put(set, setInstance);
-                        List<List<Tile>> newSetInstances = new ArrayList<>();
-                        newSetInstances.add(newSetInstance);
-                        dummy.replaceSetInstances(setInstances, newSetInstances);
+
+                        dummy.racks.get(player).add(tile);
+                        dummy.removeSetInstance(set, setInstance);
+                        dummy.findAndAddCorrespondingSet(newSetInstance);
 
                         if (dummy.isWorthExploring(movesAndDummy)) {
                             dummy.recursivelyEnumerateMoves(player, moves, movesAndDummy);
@@ -543,20 +427,6 @@ public class GameState {
         return tilesOnTable;
     }
 
-    public GameState createChild() {
-        LinkedHashMap<Player, List<Tile>> newRacks = new LinkedHashMap<>(racks);
-        for (Player player : newRacks.keySet()) {
-            newRacks.replace(player, new ArrayList<>(List.copyOf(racks.get(player))));
-        }
-
-        LinkedHashMap<Set, List<List<Tile>>> newTable = new LinkedHashMap<>(table);
-        newTable.replaceAll((s, v) -> new ArrayList<>(List.copyOf(table.get(s))));
-
-        List<Tile> newPool = new ArrayList<>(List.copyOf(pool));
-
-        return new GameState(this, newRacks, newTable, newPool);
-    }
-
     public void addSetInstance(Set set, List<Tile> setInstance) {
         if (!table.containsKey(set)) {
             table.put(set, new ArrayList<>());
@@ -572,18 +442,13 @@ public class GameState {
         }
     }
 
-    private void replaceSetInstances(LinkedHashMap<Set, List<Tile>> setInstances, List<List<Tile>> newSetInstances) {
-        for (Set set : setInstances.keySet()) {
-            removeSetInstance(set, setInstances.get(set));
-        }
+    private void findAndAddCorrespondingSet(List<Tile> setInstance) {
+        for (Set set : Game.sets) {
+            List<Tile> sortedSetInstance = set.isExactMatch(setInstance);
 
-        for (List<Tile> newSetInstance : newSetInstances) {
-            for (Set set : Game.sets) {
-                List<Tile> tilesInSet = set.isExactMatch(newSetInstance);
-                if (!tilesInSet.isEmpty()) {
-                    addSetInstance(set, tilesInSet);
-                    break;
-                }
+            if (!sortedSetInstance.isEmpty()) {
+                addSetInstance(set, sortedSetInstance);
+                break;
             }
         }
     }
@@ -621,36 +486,11 @@ public class GameState {
         return true;
     }
 
-    private boolean isLegalMergedSet(List<Tile> mergedSet) {
-        if (mergedSet.size() > 13) {
-            return false;
-        }
-
-        List<Tile> mergedSetWithoutJokers = new ArrayList<>();
-        for (Tile tile : mergedSet) {
-            if (!tile.getColour().equals("joker")) {
-                mergedSetWithoutJokers.add(tile);
-            }
-        }
-
-        int requiredNumberOfJokers = 0;
-        for (int i = 1; i < mergedSetWithoutJokers.size(); i++) {
-            Tile previousTile = mergedSetWithoutJokers.get(i - 1);
-            Tile currentTile = mergedSetWithoutJokers.get(i);
-
-            int numberDifference = currentTile.getNumber() - previousTile.getNumber();
-            if (numberDifference >= 1) {
-                requiredNumberOfJokers += numberDifference - 1;
-                if (requiredNumberOfJokers > 2) {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-        }
-
-        int numberOfJokers = mergedSet.size() - mergedSetWithoutJokers.size();
-        return numberOfJokers >= requiredNumberOfJokers;
+    public void drawTileFromPool(Player player) {
+        Tile tileFromPool = pool.remove(0);
+        racks.get(player).add(tileFromPool);
+        generateId();
+        System.out.println("Draws {" + tileFromPool.getNumber() + ", " + tileFromPool.getColour() + "} from the pool");
     }
 
     public void printRacks() {
@@ -764,6 +604,7 @@ public class GameState {
 
                 drawnTiles.remove(tileWithSmallestId);
                 System.out.print("- ");
+                assert tileWithSmallestId != null;
                 tileWithSmallestId.print();
             }
         }

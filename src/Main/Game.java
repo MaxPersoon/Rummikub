@@ -23,20 +23,6 @@ public class Game extends Thread {
     public static GameState currentState;
 
     public void run() {
-        // Validity check
-        int numberOfPlayers = playerTypes.length;
-        int numberOfObjectiveFunctions = objectiveFunctions.length;
-
-        if (numberOfPlayers < 2 || numberOfPlayers > 4) {
-            System.out.println("Error: incorrect number of players");
-            System.exit(0);
-        }
-
-        if (numberOfPlayers != numberOfObjectiveFunctions) {
-            System.out.println("Error: incorrect number of objective functions (" + numberOfObjectiveFunctions + " instead of " + numberOfPlayers + ")");
-            System.exit(0);
-        }
-
         initialize();
         gameLoop();
     }
@@ -98,7 +84,7 @@ public class Game extends Thread {
 
             // Size 4
             addNewSet("group", tilesWithSpecificNumber);
-            putJokersInSet("group", tilesWithSpecificNumber);
+            putJokersInGroup(tilesWithSpecificNumber);
 
             // Size 3
             for (Tile tile : tilesWithSpecificNumber) {
@@ -106,7 +92,7 @@ public class Game extends Thread {
                 tilesWithSpecificNumberCopy.remove(tile);
 
                 addNewSet("group", tilesWithSpecificNumberCopy);
-                putJokersInSet("group", tilesWithSpecificNumberCopy);
+                putJokersInGroup(tilesWithSpecificNumberCopy);
             }
         }
 
@@ -117,11 +103,13 @@ public class Game extends Thread {
             while (tilesWithSpecificColour.size() >= 3) {
                 List<Tile> run = new ArrayList<>();
                 run.add(tilesWithSpecificColour.remove(0));
-                for (Tile tile : tilesWithSpecificColour) {
-                    run.add(tile);
+
+                int numberOfIterations = Math.min(tilesWithSpecificColour.size(), 4);
+                for (int i = 0; i < numberOfIterations; i++) {
+                    run.add(tilesWithSpecificColour.get(i));
                     if (run.size() >= 3) {
                         addNewSet("run", run);
-                        putJokersInSet("run", run);
+                        putJokersInRun(run);
                     }
                 }
             }
@@ -192,6 +180,7 @@ public class Game extends Thread {
             }
             signatureBuilder.append(tile.getNumber()).append(",").append(tile.getColour());
         }
+        signatureBuilder.append("-").append(type);
         String signature = signatureBuilder.toString();
 
         boolean duplicate = false;
@@ -208,18 +197,36 @@ public class Game extends Thread {
         }
     }
 
-    private void putJokersInSet(String type, List<Tile> tilesInSet) {
+    private void putJokersInGroup(List<Tile> tilesInSet) {
+        Tile joker = tiles.get(tiles.size() - 2);
+
+        for (int i = 0; i < tilesInSet.size(); i++) {
+            List<Tile> tilesOneJoker = new ArrayList<>(List.copyOf(tilesInSet));
+            tilesOneJoker.remove(i);
+            tilesOneJoker.add(joker);
+            addNewSet("group", tilesOneJoker);
+
+            for (int j = 0; j < tilesInSet.size() - 1; j++) {
+                List<Tile> tilesTwoJokers = new ArrayList<>(List.copyOf(tilesOneJoker));
+                tilesTwoJokers.remove(j);
+                tilesTwoJokers.add(joker);
+                addNewSet("group", tilesTwoJokers);
+            }
+        }
+    }
+
+    private void putJokersInRun(List<Tile> tilesInSet) {
         Tile joker = tiles.get(tiles.size() - 2);
 
         for (int i = 0; i < tilesInSet.size(); i++) {
             List<Tile> tilesOneJoker = new ArrayList<>(List.copyOf(tilesInSet));
             tilesOneJoker.set(i, joker);
-            addNewSet(type, tilesOneJoker);
+            addNewSet("run", tilesOneJoker);
 
             for (int j = i + 1; j < tilesInSet.size(); j++) {
                 List<Tile> tilesTwoJokers = new ArrayList<>(List.copyOf(tilesOneJoker));
                 tilesTwoJokers.set(j, joker);
-                addNewSet(type, tilesTwoJokers);
+                addNewSet("run", tilesTwoJokers);
             }
         }
     }
@@ -266,7 +273,7 @@ public class Game extends Thread {
                 // If the player cannot make a move, draw a tile from the pool (if possible)
                 if (newState == currentState) {
                     if (currentState.getPool().size() >= 1) {
-                        newState = currentState.createChild();
+                        newState = new GameState(currentState);
                         newState.drawTileFromPool(player);
                     }
                     else {
@@ -307,7 +314,7 @@ public class Game extends Thread {
                     // Delay between players making moves
                     long startDelay = System.currentTimeMillis();
                     while (true) {
-                        if (System.currentTimeMillis() - startDelay < 500) {
+                        if (System.currentTimeMillis() - startDelay > 100) {
                             break;
                         }
                     }

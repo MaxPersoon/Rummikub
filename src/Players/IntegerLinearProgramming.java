@@ -229,7 +229,7 @@ public class IntegerLinearProgramming implements Player {
         }
 
         // Convert to GameState
-        GameState newState = currentState.createChild();
+        GameState newState = new GameState(currentState);
         tilesOnRack = newState.getRacks().get(this);
         List<Tile> drawnTiles = new ArrayList<>();
         for (Integer i : tileTypes.keySet()) {

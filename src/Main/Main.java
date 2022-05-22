@@ -22,11 +22,11 @@ import java.util.List;
 
 public class Main extends Application {
 
-    private static final String[] playerTypes = {"greedy", "greedy"};
+    private static final String[] playerTypes = {"ilp", "ilp"};
     // greedy
     // alphabeta
     // ilp
-    private static final String[] objectiveFunctions = {"ttc", "ttcwscm"};
+    private static final String[] objectiveFunctions = {"ttc", "ttv"};
     // ttc = total tile count
     // ttv = total tile value
     // ttcwscm = total tile count with set change minimization
@@ -35,6 +35,20 @@ public class Main extends Application {
     public static final List<List<double[]>> coordinatesTable = new ArrayList<>(); // each entry is a list of coordinates forming a set
 
     public static void main(String[] args) {
+        // Validity check
+        int numberOfPlayers = playerTypes.length;
+        int numberOfObjectiveFunctions = objectiveFunctions.length;
+
+        if (numberOfPlayers < 2 || numberOfPlayers > 4) {
+            System.out.println("Error: incorrect number of players");
+            System.exit(0);
+        }
+
+        if (numberOfPlayers != numberOfObjectiveFunctions) {
+            System.out.println("Error: incorrect number of objective functions (" + numberOfObjectiveFunctions + " instead of " + numberOfPlayers + ")");
+            System.exit(0);
+        }
+
         launch(args);
     }
 

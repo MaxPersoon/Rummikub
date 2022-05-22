@@ -115,7 +115,7 @@ public class Set {
             }
         } else {
             // run
-            if (tiles.size() < 13) {
+            if (tiles.size() < 5) {
                 if (tileToCheck.getColour().equals("joker")) {
                     return true;
                 }
