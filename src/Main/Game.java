@@ -9,7 +9,7 @@ import java.util.*;
 
 public class Game extends Thread {
 
-    public static final int maximumMoveTime = 500; // ms
+    public static final int maximumMoveTime = 60000; // ms
 
     public static String[] playerTypes;
     public static String[] objectiveFunctions;

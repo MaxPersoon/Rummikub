@@ -78,3 +78,12 @@ out/production/Rummikub/tiles/joker.png
 out/production/Rummikub/Experiments/runExperiments.class
 out/production/Rummikub/Experiments/data/1-moves.csv
 out/production/Rummikub/Experiments/data/1-winners.csv
+out/production/Rummikub/Experiments/data/2-moves.csv
+out/production/Rummikub/Experiments/data/2-winners.csv
+out/production/Rummikub/Experiments/data/3-moves.csv
+out/production/Rummikub/Experiments/data/3-winners.csv
+out/production/Rummikub/Experiments/data/4-moves.csv
+out/production/Rummikub/Experiments/data/4-winners.csv
+out/production/Rummikub/Experiments/data/5-moves.csv
+out/production/Rummikub/Experiments/data/5-winners.csv
+out/production/Rummikub/Experiments/computeWinrate.class

@@ -11,8 +11,8 @@ import java.util.List;
 
 public class runExperiments {
 
-    private static final String fileName = "1";
-    private static final int numberOfGamesPerCombo = 100;
+    private static final String fileName = "5";
+    private static final int numberOfGamesPerCombo = 3;
 
     private static FileWriter fileWriterMove;
     private static FileWriter fileWriterWinners;
@@ -57,6 +57,7 @@ public class runExperiments {
         Game.experimenting = true;
 
         gameCounter = 1;
+        long startTime = System.currentTimeMillis();
         for (int i = 0; i < allPlayerTypes.length; i++) {
             for (int j = i; j < allPlayerTypes.length; j++) {
                 String playerType1 = allPlayerTypes[i];
@@ -96,6 +97,9 @@ public class runExperiments {
                                 IntegerLinearProgramming.tileTypes.clear();
                                 IntegerLinearProgramming.sets.clear();
                             }
+
+                            long elapsedTime = System.currentTimeMillis() - startTime;
+                            printTimeRemaining(gameCounter, (double) elapsedTime);
 
                             gameCounter++;
                         }
@@ -142,6 +146,19 @@ public class runExperiments {
             e.printStackTrace();
             System.exit(0);
         }
+    }
+
+    private static void printTimeRemaining(int gameCounter, double elapsedTime) {
+        int totalNumberOfGames = 48 * numberOfGamesPerCombo;
+
+        elapsedTime = elapsedTime / 1000.0 / 60.0; // convert ms to minutes
+        double averageTimePerGame = elapsedTime / gameCounter;
+        double timeRemaining = averageTimePerGame * (totalNumberOfGames - gameCounter);
+
+        int hours = (int) Math.floor(timeRemaining / 60.0);
+        int minutes = (int) (timeRemaining - hours * 60);
+
+        System.out.println("Time left: " + hours + " hours and " + minutes + " minutes");
     }
 
 }
