@@ -10,12 +10,13 @@ import java.util.List;
 public class computeWinrate {
 
     private static final LinkedHashMap<String, double[]> playerData = new LinkedHashMap<>();
+    private static final LinkedHashMap<String, double[]> techniqueData = new LinkedHashMap<>();
 
     public static void main(String[] args) {
-        int[] validFiles = {1, 3, 5};
+        int[] validFiles = {3, 5};
 
         for (int validFile : validFiles) {
-            String fileName = "src/Experiments/data/" + validFile + "-moves.csv";
+            String fileName = "src/Experiments/rawData/" + validFile + "-moves.csv";
             HashMap<Integer, String[]> playersPerGame = new HashMap<>();
 
             try {
@@ -41,7 +42,7 @@ public class computeWinrate {
                 }
 
                 // Extract data
-                fileName = "src/Experiments/data/" + validFile + "-winners.csv";
+                fileName = "src/Experiments/rawData/" + validFile + "-winners.csv";
                 lines = Files.readAllLines(Path.of(fileName));
 
                 for (int j = 1; j < lines.size(); j++) {
@@ -49,38 +50,96 @@ public class computeWinrate {
                     int gameId = Integer.parseInt(lineSplit[0]);
                     String winner = lineSplit[1];
 
+                    // Determine loser
                     String[] players = playersPerGame.get(gameId);
-                    for (String player : players) {
-                        fetchPlayerData(player)[1]++; // Up total count by one
+                    String loser;
+                    if (winner.equals(players[0])) {
+                        loser = players[1];
+                    } else {
+                        loser = players[0];
                     }
 
-                    fetchPlayerData(winner)[0]++; // Up win count by one
+                    // Update player data
+                    updateData(playerData, winner, loser);
+
+                    // Update technique data
+                    String winnerTechnique = winner.split("-")[0];
+                    String loserTechnique = loser.split("-")[0];
+                    if (!winnerTechnique.equals(loserTechnique)) {
+                        updateData(techniqueData, winnerTechnique, loserTechnique);
+                    }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
 
-        // Print data
-        for (String player : playerData.keySet()) {
-            double[] data = fetchPlayerData(player);
-            double winPercentage = data[0] / data[1] * 100.0;
+        // Write data
+        File[] files = new File[2];
+        files[0] = new File("src/Experiments/processedData/techniqueWinrate.csv");
+        files[1] = new File("src/Experiments/processedData/playerWinrate.csv");
 
-            System.out.print(player + ": ");
-            System.out.format("%.2f", winPercentage);
-            System.out.println("%");
-        }
-    }
+        for (File file : files) {
+            if (file.exists()) {
+                file.delete();
+            }
 
-    private static double[] fetchPlayerData(String player) {
-        for (String key : playerData.keySet()) {
-            if (key.equals(player)) {
-                return playerData.get(player);
+            try {
+                file.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
         }
 
-        playerData.put(player, new double[2]);
-        return playerData.get(player);
+        writeData(techniqueData, files[0], false);
+        writeData(playerData, files[1], true);
+    }
+
+    private static double[] fetchData(LinkedHashMap<String, double[]> data, String entry) {
+        for (String key : data.keySet()) {
+            if (key.equals(entry)) {
+                return data.get(entry);
+            }
+        }
+
+        data.put(entry, new double[2]);
+        return data.get(entry);
+    }
+
+    private static void updateData(LinkedHashMap<String, double[]> data, String winner, String loser) {
+        double[] winnerData = fetchData(data, winner);
+        double[] loserData = fetchData(data, loser);
+
+        winnerData[0]++; // Add win
+        winnerData[1]++; // Add game
+        loserData[1]++; // Add game
+    }
+
+    private static void writeData(LinkedHashMap<String, double[]> data, File file, boolean includeObjectiveFunction) {
+        try {
+            PrintWriter writer = new PrintWriter(new FileWriter(file));
+            writer.print("optimisationTechnique,");
+            if (includeObjectiveFunction) {
+                writer.print("objectiveFunction,");
+            }
+            writer.println("winrate (%)");
+
+            for (String key : data.keySet()) {
+                double[] keyData = fetchData(data, key);
+                double winPercentage = keyData[0] / keyData[1] * 100.0;
+
+                String[] keySplit = key.split("-");
+                writer.print(keySplit[0] + ",");
+                if (includeObjectiveFunction) {
+                    writer.print(keySplit[1] + ",");
+                }
+                writer.format("%.2f%n", winPercentage);
+            }
+
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 }

@@ -11,16 +11,16 @@ import java.util.List;
 
 public class runExperiments {
 
-    private static final String fileName = "5";
-    private static final int numberOfGamesPerCombo = 3;
+    private static final String fileName = "6";
+    private static final int numberOfGamesPerCombo = 5;
 
     private static FileWriter fileWriterMove;
     private static FileWriter fileWriterWinners;
     private static int gameCounter;
 
     public static void main(String[] args) {
-        String pathnameMove = "src/Experiments/data/" + fileName + "-moves.csv";
-        String pathnameWinners = "src/Experiments/data/" + fileName + "-winners.csv";
+        String pathnameMove = "src/Experiments/rawData/" + fileName + "-moves.csv";
+        String pathnameWinners = "src/Experiments/rawData/" + fileName + "-winners.csv";
 
         try {
             File fileMove = new File(pathnameMove);
