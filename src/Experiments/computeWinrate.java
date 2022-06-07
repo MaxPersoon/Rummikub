@@ -13,6 +13,17 @@ public class computeWinrate {
     private static final LinkedHashMap<String, double[]> techniqueData = new LinkedHashMap<>();
 
     public static void main(String[] args) {
+        String[] optimisationTechniques = {"AlphaBeta", "Greedy", "ILP"};
+        String[] objectiveFunctions = {"ttc", "ttcwscm", "ttv", "ttvwscm"};
+
+        for (String optimisationTechnique : optimisationTechniques) {
+            techniqueData.put(optimisationTechnique, new double[2]);
+            for (String objectiveFunction : objectiveFunctions) {
+                String player = optimisationTechnique + "-" + objectiveFunction;
+                playerData.put(player, new double[2]);
+            }
+        }
+
         int[] validFiles = {3, 5};
 
         for (int validFile : validFiles) {
@@ -102,8 +113,7 @@ public class computeWinrate {
             }
         }
 
-        data.put(entry, new double[2]);
-        return data.get(entry);
+        return null; // Should never be reached
     }
 
     private static void updateData(LinkedHashMap<String, double[]> data, String winner, String loser) {
