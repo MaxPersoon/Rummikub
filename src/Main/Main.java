@@ -26,11 +26,10 @@ public class Main extends Application {
     // greedy
     // alphabeta
     // ilp
-    private static final String[] objectiveFunctions = {"ttc", "ttv"};
+    private static final String[] objectiveFunctions = {"ttc", "ttcwscm"};
     // ttc = total tile count
     // ttv = total tile value
-    // ttcwscm = total tile count with set change minimization
-    // ttvwscm = total tile value with set change minimization
+    // ...wscm = with set change minimization
     public static final LinkedHashMap<Integer, List<double[]>> coordinatesRacks = new LinkedHashMap<>(); // maps playerIDs to list of coordinates
     public static final List<List<double[]>> coordinatesTable = new ArrayList<>(); // each entry is a list of coordinates forming a set
 

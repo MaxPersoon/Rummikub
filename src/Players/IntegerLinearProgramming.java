@@ -21,6 +21,8 @@ public class IntegerLinearProgramming implements Player {
     private final int id;
     private final String objectiveFunction;
     private boolean stuck;
+    private List<MPVariable> xValues;
+    private List<MPVariable> yValues;
 
     public IntegerLinearProgramming(int id, String objectiveFunction) {
         this.id = id;
@@ -71,16 +73,21 @@ public class IntegerLinearProgramming implements Player {
     }
 
     public GameState makeMove(GameState currentState) {
-        // Create the linear solver with the SCIP backend.
+        double objectiveValue = createModelAndSolve(currentState, this, objectiveFunction);
+        return translateSolutionToState(currentState, objectiveValue);
+    }
+
+    private double createModelAndSolve(GameState currentState, Player engagingPlayer, String objectiveFunction) {
+        // Create the linear solver with the SCIP backend
         MPSolver solver = MPSolver.createSolver("SCIP");
         List<Integer> sValues = new ArrayList<>();
         List<Integer> wValues = new ArrayList<>();
         List<Integer> tValues = new ArrayList<>();
         List<Integer> rValues = new ArrayList<>();
         List<Integer> vValues = new ArrayList<>();
-        List<MPVariable> xValues = new ArrayList<>();
+        xValues = new ArrayList<>();
         List<MPVariable> zValues = new ArrayList<>();
-        List<MPVariable> yValues = new ArrayList<>();
+        yValues = new ArrayList<>();
 
         // s_ij (p): tile i occurs 0, 1 or 2 times in set j (non-joker: maximum of 1)
         // w_j (p): set j is 0, 1 or 2 times on the table
@@ -91,6 +98,7 @@ public class IntegerLinearProgramming implements Player {
         // z_j (v): set j occurs 0, 1 or 2 times in the old and in the new solutions
         // y_i (v): tile i can be placed 0, 1 or 2 times from the player's rack onto the table
 
+        // Extract parameter values; create variables and constraints
         for (Integer j : sets.keySet()) {
             MPVariable x_j = solver.makeIntVar(0, 2, "x_" + j);
             xValues.add(x_j);
@@ -117,7 +125,7 @@ public class IntegerLinearProgramming implements Player {
         }
 
         List<Tile> tilesOnTable = currentState.fetchTilesOnTable();
-        List<Tile> tilesOnRack = new ArrayList<>(List.copyOf(currentState.getRacks().get(this)));
+        List<Tile> tilesOnRack = new ArrayList<>(List.copyOf(currentState.getRacks().get(engagingPlayer)));
         for (Integer i : tileTypes.keySet()) {
             List<Tile> copies = tileTypes.get(i);
             int t_i = 0;
@@ -174,7 +182,7 @@ public class IntegerLinearProgramming implements Player {
             }
         }
 
-        // Objective function
+        // Create objective function
         MPObjective objective = solver.objective();
         objective.setMaximization();
 
@@ -198,6 +206,10 @@ public class IntegerLinearProgramming implements Player {
             }
         }
 
+        // Solve
+        solver.solve();
+        double objectiveValue = objective.value();
+
         // Debugging
         if (debug) {
             System.out.println("<<< DEBUG START >>>");
@@ -219,18 +231,18 @@ public class IntegerLinearProgramming implements Player {
             }
 
             System.out.println();
-        }
 
-        // Solve
-        solver.solve();
-        if (debug) {
             System.out.println("Solution:");
-            System.out.println("- Objective value = " + objective.value() + "\n");
+            System.out.println("- Objective value = " + objectiveValue + "\n");
         }
 
-        // Convert to GameState
+        return objectiveValue;
+    }
+
+    private GameState translateSolutionToState(GameState currentState, double objectiveValue) {
+        // Determine what tiles have been drawn from this player's rack
         GameState newState = new GameState(currentState);
-        tilesOnRack = newState.getRacks().get(this);
+        List<Tile> tilesOnRack = newState.getRacks().get(this);
         List<Tile> drawnTiles = new ArrayList<>();
         for (Integer i : tileTypes.keySet()) {
             List<Tile> copies = tileTypes.get(i);
@@ -257,6 +269,7 @@ public class IntegerLinearProgramming implements Player {
         }
 
         if (!drawnTiles.isEmpty()) {
+            // Determine what sets have been drawn and what sets have been removed
             List<Set> drawnSets = new ArrayList<>();
             for (Integer j : sets.keySet()) {
                 Set set = sets.get(j);
@@ -301,7 +314,7 @@ public class IntegerLinearProgramming implements Player {
                 newState.addSetInstance(set, setInstance);
             }
 
-            newState.setScore(objective.value());
+            newState.setScore(objectiveValue);
             return newState;
         }
         else {

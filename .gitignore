@@ -96,3 +96,7 @@ src/Experiments/.idea/modules.xml
 out/production/Rummikub/Experiments/computeEfficiency.ipynb
 out/production/Rummikub/Experiments/processedData/playerEfficiency.csv
 out/production/Rummikub/Experiments/processedData/techniqueEfficiency.csv
+out/production/Rummikub/Experiments/rawData/6-moves.csv
+out/production/Rummikub/Experiments/rawData/6-winners.csv
+out/production/Rummikub/Experiments/rawData/7-moves.csv
+out/production/Rummikub/Experiments/rawData/7-winners.csv

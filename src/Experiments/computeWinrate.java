@@ -24,7 +24,7 @@ public class computeWinrate {
             }
         }
 
-        int[] validFiles = {3, 5};
+        int[] validFiles = {3, 5, 6, 7};
 
         for (int validFile : validFiles) {
             String fileName = "src/Experiments/rawData/" + validFile + "-moves.csv";
