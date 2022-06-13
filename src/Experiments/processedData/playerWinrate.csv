@@ -1,13 +1,13 @@
 optimisationTechnique,objectiveFunction,winrate (%)
-AlphaBeta,ttc,38.28
-AlphaBeta,ttcwscm,38.28
-AlphaBeta,ttv,24.22
-AlphaBeta,ttvwscm,31.25
-Greedy,ttc,45.45
-Greedy,ttcwscm,42.86
-Greedy,ttv,42.36
-Greedy,ttvwscm,43.75
-ILP,ttc,68.75
-ILP,ttcwscm,79.86
-ILP,ttv,66.07
-ILP,ttvwscm,74.43
+AlphaBeta,ttc,38.59
+AlphaBeta,ttcwscm,36.96
+AlphaBeta,ttv,25.54
+AlphaBeta,ttvwscm,31.52
+Greedy,ttc,46.64
+Greedy,ttcwscm,44.72
+Greedy,ttv,40.10
+Greedy,ttvwscm,46.96
+ILP,ttc,67.83
+ILP,ttcwscm,77.78
+ILP,ttv,63.98
+ILP,ttvwscm,75.49

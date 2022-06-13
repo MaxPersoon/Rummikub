@@ -1,4 +1,4 @@
 optimisationTechnique,score,computationTime,efficiency
-AlphaBeta,1630.72,3586.48,0.45
-Greedy,1597.81,5615.77,0.28
-ILP,1046.85,56.91,18.39
+AlphaBeta,2064.39,5615.41,0.37
+Greedy,2090.32,8090.27,0.26
+ILP,1597.34,90.56,17.64

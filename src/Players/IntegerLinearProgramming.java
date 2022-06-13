@@ -73,11 +73,11 @@ public class IntegerLinearProgramming implements Player {
     }
 
     public GameState makeMove(GameState currentState) {
-        double objectiveValue = createModelAndSolve(currentState, this, objectiveFunction);
+        double objectiveValue = createModelAndSolve(currentState);
         return translateSolutionToState(currentState, objectiveValue);
     }
 
-    private double createModelAndSolve(GameState currentState, Player engagingPlayer, String objectiveFunction) {
+    private double createModelAndSolve(GameState currentState) {
         // Create the linear solver with the SCIP backend
         MPSolver solver = MPSolver.createSolver("SCIP");
         List<Integer> sValues = new ArrayList<>();
@@ -125,7 +125,7 @@ public class IntegerLinearProgramming implements Player {
         }
 
         List<Tile> tilesOnTable = currentState.fetchTilesOnTable();
-        List<Tile> tilesOnRack = new ArrayList<>(List.copyOf(currentState.getRacks().get(engagingPlayer)));
+        List<Tile> tilesOnRack = new ArrayList<>(List.copyOf(currentState.getRacks().get(this)));
         for (Integer i : tileTypes.keySet()) {
             List<Tile> copies = tileTypes.get(i);
             int t_i = 0;

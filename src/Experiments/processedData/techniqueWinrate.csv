@@ -1,4 +1,4 @@
 optimisationTechnique,winrate (%)
-AlphaBeta,22.81
-Greedy,40.00
-ILP,87.19
+AlphaBeta,23.04
+Greedy,41.09
+ILP,85.87

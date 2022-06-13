@@ -81,14 +81,8 @@ out/production/Rummikub/Experiments/.idea/Experiments.iml
 out/production/Rummikub/Experiments/.idea/modules.xml
 out/production/Rummikub/Experiments/processedData/playerWinrate.csv
 out/production/Rummikub/Experiments/processedData/techniqueWinrate.csv
-out/production/Rummikub/Experiments/rawData/1-moves.csv
-out/production/Rummikub/Experiments/rawData/1-winners.csv
-out/production/Rummikub/Experiments/rawData/2-moves.csv
-out/production/Rummikub/Experiments/rawData/2-winners.csv
 out/production/Rummikub/Experiments/rawData/3-moves.csv
 out/production/Rummikub/Experiments/rawData/3-winners.csv
-out/production/Rummikub/Experiments/rawData/4-moves.csv
-out/production/Rummikub/Experiments/rawData/4-winners.csv
 out/production/Rummikub/Experiments/rawData/5-moves.csv
 out/production/Rummikub/Experiments/rawData/5-winners.csv
 src/Experiments/.idea/Experiments.iml
@@ -100,3 +94,9 @@ out/production/Rummikub/Experiments/rawData/6-moves.csv
 out/production/Rummikub/Experiments/rawData/6-winners.csv
 out/production/Rummikub/Experiments/rawData/7-moves.csv
 out/production/Rummikub/Experiments/rawData/7-winners.csv
+out/production/Rummikub/Experiments/rawData/10-moves.csv
+out/production/Rummikub/Experiments/rawData/10-winners.csv
+out/production/Rummikub/Experiments/rawData/8-moves.csv
+out/production/Rummikub/Experiments/rawData/8-winners.csv
+out/production/Rummikub/Experiments/rawData/9-moves.csv
+out/production/Rummikub/Experiments/rawData/9-winners.csv

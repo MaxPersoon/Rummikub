@@ -11,8 +11,8 @@ import java.util.List;
 
 public class runExperiments {
 
-    private static final String fileName = "6";
-    private static final int numberOfGamesPerCombo = 5;
+    private static final String fileName = "11";
+    private static final int numberOfGamesPerCombo = 3;
 
     private static FileWriter fileWriterMove;
     private static FileWriter fileWriterWinners;
