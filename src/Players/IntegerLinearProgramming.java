@@ -8,13 +8,10 @@ import com.google.ortools.Loader;
 import com.google.ortools.linearsolver.*;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 
 public class IntegerLinearProgramming implements Player {
-
-    public static double wogmM = 36;
 
     public static final LinkedHashMap<Integer, List<Tile>> tileTypes = new LinkedHashMap<>(); // Maps index i to type of tile
     public static final LinkedHashMap<Integer, Set> sets = new LinkedHashMap<>(); // Maps index j to set
@@ -24,17 +21,12 @@ public class IntegerLinearProgramming implements Player {
     private final int id;
     private final String objectiveFunction;
     private boolean stuck;
-    private List<Integer> pValues;
     private List<MPVariable> xValues;
     private List<MPVariable> yValues;
 
     public IntegerLinearProgramming(int id, String objectiveFunction) {
         this.id = id;
-        if (objectiveFunction.contains("wogm") && !objectiveFunction.contains("wscm")) {
-            this.objectiveFunction = objectiveFunction + "wscm";
-        } else {
-            this.objectiveFunction = objectiveFunction;
-        }
+        this.objectiveFunction = objectiveFunction;
         this.stuck = false;
 
         if (tileTypes.isEmpty()) {
@@ -47,13 +39,6 @@ public class IntegerLinearProgramming implements Player {
 
             for (int i = 0; i < Game.sets.size(); i++) {
                 sets.put(sets.size() + 1, Game.sets.get(i));
-            }
-        }
-
-        if (objectiveFunction.contains("wogm")) {
-            pValues = new ArrayList<>();
-            for (int j = 0; j < sets.size(); j++) {
-                pValues.add(0);
             }
         }
 
@@ -88,56 +73,8 @@ public class IntegerLinearProgramming implements Player {
     }
 
     public GameState makeMove(GameState currentState) {
-        if (objectiveFunction.contains("wogm")) {
-            Player opponent = Game.nextPlayer(this);
-            String opponentObjectiveFunction = opponent.getObjectiveFunction();
-            if (!opponentObjectiveFunction.contains("wscm")) {
-                opponentObjectiveFunction = opponentObjectiveFunction + "wscm";
-            }
-
-            GameState nextState = currentState;
-
-            HashMap<GameState, Double> solutions = new HashMap<>();
-            boolean converged = false;
-            while (!converged) {
-                double ourObjectiveValue = createModelAndSolve(currentState, this, objectiveFunction);
-                List<MPVariable> ourXValues = new ArrayList<>(List.copyOf(xValues));
-                GameState ourResultingState = translateSolutionToState(currentState, ourObjectiveValue);
-
-                double opponentsObjectiveValue = createModelAndSolve(ourResultingState, opponent, opponentObjectiveFunction);
-                GameState opponentsResultingState = translateSolutionToState(ourResultingState, opponentsObjectiveValue);
-
-                double difference = ourObjectiveValue - opponentsObjectiveValue;
-                if (difference > 1 && !opponent.checkWin(opponentsResultingState)) {
-                    converged = true;
-                    nextState = ourResultingState;
-                } else if (alreadyExplored(ourResultingState, solutions, difference)) {
-                    converged = true;
-
-                    double smallestDeficit = difference;
-                    for (GameState solution : solutions.keySet()) {
-                        double deficit = solutions.get(solution);
-
-                        if (deficit < smallestDeficit) {
-                            smallestDeficit = deficit;
-                            nextState = solution;
-                        }
-                    }
-                } else {
-                    calculatePValues(currentState, nextState, ourXValues);
-                }
-            }
-
-            pValues = new ArrayList<>();
-            for (int j = 0; j < sets.size(); j++) {
-                pValues.add(0);
-            }
-
-            return nextState;
-        } else {
-            double objectiveValue = createModelAndSolve(currentState, this, objectiveFunction);
-            return translateSolutionToState(currentState, objectiveValue);
-        }
+        double objectiveValue = createModelAndSolve(currentState, this, objectiveFunction);
+        return translateSolutionToState(currentState, objectiveValue);
     }
 
     private double createModelAndSolve(GameState currentState, Player engagingPlayer, String objectiveFunction) {
@@ -269,19 +206,9 @@ public class IntegerLinearProgramming implements Player {
             }
         }
 
-        if (objectiveFunction.contains("wogm")) {
-            double M = 1;
-            for (int j = 0; j < xValues.size(); j++) {
-                objective.setCoefficient(xValues.get(j), pValues.get(j) * -1 / wogmM);
-            }
-        }
-
         // Solve
-        MPSolver.ResultStatus resultStatus = solver.solve();
-        double objectiveValue = 0;
-        if (resultStatus == MPSolver.ResultStatus.OPTIMAL) {
-            objectiveValue = objective.value();
-        }
+        solver.solve();
+        double objectiveValue = objective.value();
 
         // Debugging
         if (debug) {
@@ -397,53 +324,6 @@ public class IntegerLinearProgramming implements Player {
 
             return currentState;
         }
-    }
-
-    private void calculatePValues(GameState ourStartState, GameState opponentsStartState, List<MPVariable> ourXValues) {
-        List<Integer> ourDifferencesInNumber = calculateDifferencesInNumber(ourStartState, ourXValues);
-        List<Integer> opponentsDifferencesInNumber = calculateDifferencesInNumber(opponentsStartState, xValues);
-
-        for (int j = 0; j < sets.size(); j++) {
-            pValues.set(j, 0);
-
-            if (ourDifferencesInNumber.get(j) > 0) {
-                // We have drawn set j
-                if (opponentsDifferencesInNumber.get(j) < 0) {
-                    // Opponent has removed set j --> opponent gained improvement in objective value
-                    pValues.set(j, 1);
-                }
-            }
-        }
-    }
-
-    private List<Integer> calculateDifferencesInNumber(GameState state, List<MPVariable> xValues) {
-        List<Integer> differencesInNumber = new ArrayList<>();
-
-        for (Integer j : sets.keySet()) {
-            Set set = sets.get(j);
-            int differenceInNumber = (int) xValues.get(j - 1).solutionValue(); // x_j
-
-            if (state.getTable().containsKey(set)) {
-                differenceInNumber -= state.getTable().get(set).size();
-            }
-
-            differencesInNumber.add(differenceInNumber);
-        }
-
-        return differencesInNumber;
-    }
-
-    private boolean alreadyExplored(GameState mostRecentSolution, HashMap<GameState, Double> solutions, double deficit) {
-        mostRecentSolution.generateId();
-
-        for (GameState solution : solutions.keySet()) {
-            if (solution.getId().equals(mostRecentSolution.getId())) {
-                return true;
-            }
-        }
-
-        solutions.put(mostRecentSolution, deficit);
-        return false;
     }
 
     public boolean checkWin(GameState state) {

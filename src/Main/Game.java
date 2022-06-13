@@ -9,8 +9,6 @@ import java.util.*;
 
 public class Game extends Thread {
 
-    public static boolean finetuning = false;
-
     public static final int maximumMoveTime = 60000; // ms
 
     public static String[] playerTypes;
@@ -46,7 +44,7 @@ public class Game extends Thread {
                 Tile copy1 = new Tile(tiles.size() + 1, number, colour);
                 Tile copy2 = new Tile(tiles.size() + 2, number, colour);
 
-                if (!experimenting && !finetuning) {
+                if (!experimenting) {
                     copy1.setImage((ImageView) nodes.get(tiles.size() + 1));
                     copy2.setImage((ImageView) nodes.get(tiles.size() + 2));
                 }
@@ -66,7 +64,7 @@ public class Game extends Thread {
         Tile jokerCopy1 = new Tile(tiles.size() + 1, 30, "joker");
         Tile jokerCopy2 = new Tile(tiles.size() + 2, 30, "joker");
 
-        if (!experimenting && !finetuning) {
+        if (!experimenting) {
             jokerCopy1.setImage((ImageView) nodes.get(tiles.size() + 1));
             jokerCopy2.setImage((ImageView) nodes.get(tiles.size() + 2));
         }
@@ -169,7 +167,7 @@ public class Game extends Thread {
 
         currentState = new GameState(racks, table, pool);
         currentState.printRacks();
-        if (!experimenting && !finetuning) {
+        if (!experimenting) {
             currentState.visualize();
         }
     }
@@ -293,7 +291,7 @@ public class Game extends Thread {
                         System.out.println("Move score: " + score);
                     }
                     System.out.println("Time needed (ms): " + computationTime + "\n");
-                    if (!experimenting && !finetuning) {
+                    if (!experimenting) {
                         newState.visualize();
                     }
 
@@ -312,7 +310,7 @@ public class Game extends Thread {
                     break;
                 }
 
-                if (!experimenting && !finetuning) {
+                if (!experimenting) {
                     // Delay between players making moves
                     long startDelay = System.currentTimeMillis();
                     while (true) {
