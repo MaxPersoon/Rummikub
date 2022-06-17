@@ -31,8 +31,7 @@ to be used by player 1, respectively. Some technicalities:
 - The visualisation has been designed for a 1920x1080 resolution
 - Any combination of an optimisation technique and an objective function works
 
-The game can be launched by running the main() method in the src/Main/Main.java file. The visualisation is enabled by default. For every move made in the game,
-the terminal will dislay detailed information.
+The game can be launched by running the main() method in the src/Main/Main.java file. The visualisation is enabled by default. For every move made in the game, the terminal will display detailed information.
 
 ## The experiment environment
 src/Experiments houses the experiment environment, which is responsible for gathering data by means of running experiments and processing the acquired data.
